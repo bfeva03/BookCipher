@@ -1,7 +1,13 @@
+# Python
 __pycache__/
-build/
-dist/
-*.spec
+*.pyc
 .DS_Store
-*.iconset/
+
+# PyInstaller outputs (don’t commit)
+dist/
+build/
+*.spec
+
+# Local tooling
+*.log
 
