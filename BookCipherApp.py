@@ -1,214 +1,325 @@
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from tkinter import ttk
 from pathlib import Path
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 
 import cipher_core
 
-# -------------------------
+# Use tkmacosx if present for nicer buttons on macOS (optional)
+try:
+    from tkmacosx import Button as MacButton  # type: ignore
+except Exception:
+    MacButton = None
+
+
+# ----------------------------
 # Crimson theme palette
-# -------------------------
-BG = "#12060A"          # near-black crimson
-PANEL = "#1C0A10"       # panel background
-ACCENT = "#A1122A"      # crimson
-ACCENT_2 = "#D7263D"    # brighter crimson
-FG = "#F3E9EC"          # near-white
-MUTED = "#BCA7AE"       # muted text
-ENTRY_BG = "#220B13"    # entry/text bg
-BORDER = "#3A131F"      # border-ish
+# ----------------------------
+BG = "#12060A"
+PANEL = "#1C0A10"
+PANEL_2 = "#220B13"
+ACCENT = "#A1122A"
+ACCENT_2 = "#D7263D"
+FG = "#F3E9EC"
+MUTED = "#BCA7AE"
+BORDER = "#4A1A24"
+ENTRY_BG = "#220B13"      # FIX: was missing in your crash
+TEXT_BG = "#12060A"
+
+APP_TITLE = "BookCipher"
+
+
+def key_strength_score(s: str) -> tuple[int, str]:
+    """
+    Simple, useful meter (not "security math", but good UX).
+    Returns (0-100, label)
+    """
+    s = s or ""
+    length = len(s)
+    if length == 0:
+        return 0, "Empty"
+
+    classes = 0
+    if any(c.islower() for c in s): classes += 1
+    if any(c.isupper() for c in s): classes += 1
+    if any(c.isdigit() for c in s): classes += 1
+    if any(not c.isalnum() for c in s): classes += 1
+
+    # Score
+    score = 0
+    score += min(length, 24) * 3            # up to 72
+    score += (classes - 1) * 10             # 0..30
+    score = max(0, min(100, score))
+
+    if score < 30:
+        label = "Weak"
+    elif score < 60:
+        label = "OK"
+    elif score < 80:
+        label = "Strong"
+    else:
+        label = "Very strong"
+
+    return score, label
 
 
 class BookCipherApp(tk.Tk):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.title("BookCipher")
-        self.geometry("860x640")
+        self.title(APP_TITLE)
         self.configure(bg=BG)
 
-        # Force ttk to use a theme that allows colors (fixes “invisible buttons” on macOS)
+        # optional logo in header area (doesn't affect macOS .icns app icon)
+        self._logo_img = None
+        self._try_load_logo()
+
+        # State
+        self.book_paths: list[Path] = []
+        self.autoclean_var = tk.BooleanVar(value=True)
+
+        self.key_var = tk.StringVar(value="")
+        self.show_key_var = tk.BooleanVar(value=False)
+
+        self.status_var = tk.StringVar(value="Pick one or more .txt books to begin.")
+        self.strength_var = tk.StringVar(value="Key strength: Empty")
+        self.strength_value = tk.IntVar(value=0)
+
+        # Build UI
+        self._build_styles()
+        self._build_ui()
+        self._bind_events()
+
+        self._update_key_strength()
+
+    # ---------- UI helpers ----------
+
+    def _build_styles(self) -> None:
         style = ttk.Style(self)
         try:
             style.theme_use("clam")
         except Exception:
             pass
 
-        # ttk styles
-        style.configure("Crimson.TFrame", background=BG)
-        style.configure("Panel.TLabelframe", background=PANEL, foreground=FG, bordercolor=BORDER)
-        style.configure("Panel.TLabelframe.Label", background=PANEL, foreground=FG)
-
-        style.configure("Crimson.TLabel", background=BG, foreground=FG)
-        style.configure("Muted.TLabel", background=BG, foreground=MUTED)
+        style.configure("TFrame", background=BG)
+        style.configure("Panel.TFrame", background=PANEL)
+        style.configure("TLabel", background=PANEL, foreground=FG)
+        style.configure("Title.TLabel", background=PANEL, foreground=FG, font=("Helvetica", 18, "bold"))
+        style.configure("Sub.TLabel", background=PANEL, foreground=MUTED)
 
         style.configure(
-            "Crimson.TCheckbutton",
-            background=BG,
+            "TCheckbutton",
+            background=PANEL,
             foreground=FG,
-            focusthickness=0,
         )
 
         style.configure(
-            "Crimson.TButton",
+            "Strength.Horizontal.TProgressbar",
+            troughcolor=PANEL_2,
             background=ACCENT,
-            foreground=FG,
-            padding=(14, 10),
-            borderwidth=0,
-            focusthickness=2,
-            focuscolor=ACCENT_2,
-        )
-        style.map(
-            "Crimson.TButton",
-            background=[("active", ACCENT_2), ("pressed", ACCENT_2)],
-            foreground=[("disabled", MUTED)],
+            bordercolor=BORDER,
+            lightcolor=ACCENT,
+            darkcolor=ACCENT,
         )
 
-        style.configure(
-            "Secondary.TButton",
-            background="#2A0F18",
-            foreground=FG,
-            padding=(14, 10),
-            borderwidth=0,
-            focusthickness=2,
-            focuscolor=ACCENT_2,
+    def _try_load_logo(self) -> None:
+        # Put logo.png in the same folder as BookCipherApp.py (or project root)
+        candidates = [
+            Path(__file__).with_name("logo.png"),
+            Path.cwd() / "logo.png",
+        ]
+        for p in candidates:
+            if p.exists():
+                try:
+                    self._logo_img = tk.PhotoImage(file=str(p))
+                    return
+                except Exception:
+                    self._logo_img = None
+                    return
+
+    def _build_ui(self) -> None:
+        outer = ttk.Frame(self, style="Panel.TFrame", padding=14)
+        outer.pack(fill="both", expand=True)
+
+        # Header
+        header = ttk.Frame(outer, style="Panel.TFrame")
+        header.pack(fill="x")
+
+        if self._logo_img:
+            logo_lbl = tk.Label(header, image=self._logo_img, bg=PANEL)
+            logo_lbl.pack(side="left", padx=(0, 10))
+
+        title = ttk.Label(header, text="BookCipher", style="Title.TLabel")
+        title.pack(side="left")
+
+        subtitle = ttk.Label(
+            outer,
+            text="Hybrid book cipher • compact ciphertext (no spaces) • authenticated encryption",
+            style="Sub.TLabel",
         )
-        style.map(
-            "Secondary.TButton",
-            background=[("active", "#3A131F"), ("pressed", "#3A131F")],
-        )
+        subtitle.pack(anchor="w", pady=(6, 10))
 
-        # State
-        self.book_paths: list[str] = []
-        self.corpus_text: str | None = None
-        self.autoclean_var = tk.BooleanVar(value=True)
-        self.key_var = tk.StringVar(value="")
-        self.status_var = tk.StringVar(value="Add one or more book .txt files to begin.")
+        # Top row controls
+        top = ttk.Frame(outer, style="Panel.TFrame")
+        top.pack(fill="x", pady=(0, 10))
 
-        # --- Header ---
-        header = ttk.Frame(self, style="Crimson.TFrame")
-        header.pack(fill="x", padx=16, pady=(14, 8))
-
-        ttk.Label(header, text="BookCipher", style="Crimson.TLabel", font=("Helvetica", 20, "bold")).pack(anchor="w")
-        ttk.Label(
-            header,
-            text="Hybrid book cipher • compact ciphertext (no spaces) • optional key",
-            style="Muted.TLabel",
-            font=("Helvetica", 12),
-        ).pack(anchor="w", pady=(2, 0))
-
-        # --- Controls row ---
-        controls = ttk.Frame(self, style="Crimson.TFrame")
-        controls.pack(fill="x", padx=16, pady=(0, 10))
-
-        ttk.Button(controls, text="Add Books (.txt)…", command=self.add_books, style="Crimson.TButton").pack(side="left")
-        ttk.Button(controls, text="Remove Selected", command=self.remove_selected, style="Secondary.TButton").pack(
-            side="left", padx=(8, 0)
-        )
+        self._btn(top, "Add Books (.txt)…", self.add_books).pack(side="left")
+        self._btn(top, "Remove Selected", self.remove_selected).pack(side="left", padx=(8, 0))
 
         ttk.Checkbutton(
-            controls,
+            top,
             text="Auto-clean Gutenberg headers",
             variable=self.autoclean_var,
-            style="Crimson.TCheckbutton",
-        ).pack(side="left", padx=(14, 0))
+            command=self._on_books_changed,
+        ).pack(side="left", padx=(16, 0))
 
-        keybox = ttk.Frame(controls, style="Crimson.TFrame")
-        keybox.pack(side="right")
+        ttk.Label(top, text="Key:", style="TLabel").pack(side="left", padx=(16, 6))
 
-        ttk.Label(keybox, text="Key (optional):", style="Crimson.TLabel").pack(side="left", padx=(0, 8))
+        # Key entry + show/hide
         self.key_entry = tk.Entry(
-            keybox,
+            top,
             textvariable=self.key_var,
+            show="•",
             bg=ENTRY_BG,
             fg=FG,
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
             highlightthickness=1,
-            width=26,
             relief="flat",
+            width=28,
         )
         self.key_entry.pack(side="left")
-        ttk.Label(keybox, text="(same key ⇒ same output)", style="Muted.TLabel").pack(side="left", padx=(10, 0))
 
-        # --- Books panel ---
-        books_panel = ttk.LabelFrame(self, text="Books (combined into one corpus)", style="Panel.TLabelframe")
-        books_panel.pack(fill="x", padx=16, pady=(0, 12))
+        self._btn(top, "Show", self.toggle_show_key, mini=True).pack(side="left", padx=(8, 0))
+
+        # Strength meter
+        strength_row = ttk.Frame(outer, style="Panel.TFrame")
+        strength_row.pack(fill="x", pady=(0, 10))
+
+        self.strength_label = ttk.Label(strength_row, textvariable=self.strength_var, style="Sub.TLabel")
+        self.strength_label.pack(side="left")
+
+        self.strength_bar = ttk.Progressbar(
+            strength_row,
+            style="Strength.Horizontal.TProgressbar",
+            maximum=100,
+            variable=self.strength_value,
+            length=220,
+        )
+        self.strength_bar.pack(side="left", padx=(10, 0))
+
+        # Books list
+        books_box = ttk.Frame(outer, style="Panel.TFrame")
+        books_box.pack(fill="both", expand=False)
+
+        ttk.Label(books_box, text="Books (combined into one corpus)", style="TLabel").pack(anchor="w")
 
         self.books_list = tk.Listbox(
-            books_panel,
-            height=4,
-            bg=ENTRY_BG,
+            books_box,
+            bg=TEXT_BG,
             fg=FG,
+            highlightbackground=BORDER,
+            highlightcolor=ACCENT_2,
             selectbackground=ACCENT,
             selectforeground=FG,
-            highlightbackground=BORDER,
-            highlightcolor=ACCENT_2,
-            highlightthickness=1,
-            borderwidth=0,
+            relief="flat",
+            height=5,
         )
-        self.books_list.pack(fill="x", padx=10, pady=10)
+        self.books_list.pack(fill="x", pady=(6, 10))
 
-        # --- Text panels ---
-        mid = ttk.Frame(self, style="Crimson.TFrame")
-        mid.pack(fill="both", expand=True, padx=16, pady=(0, 12))
-
-        plain_frame = ttk.LabelFrame(mid, text="Plaintext", style="Panel.TLabelframe")
-        plain_frame.pack(fill="both", expand=True)
-
+        # Plaintext
+        ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
         self.plain = tk.Text(
-            plain_frame,
-            height=8,
+            outer,
+            height=7,
+            bg=TEXT_BG,
+            fg=FG,
+            insertbackground=FG,
+            highlightbackground=BORDER,
+            highlightcolor=ACCENT_2,
+            relief="flat",
             wrap="word",
-            bg=ENTRY_BG,
-            fg=FG,
-            insertbackground=FG,
-            highlightbackground=BORDER,
-            highlightcolor=ACCENT_2,
-            highlightthickness=1,
-            borderwidth=0,
         )
-        self.plain.pack(fill="both", expand=True, padx=10, pady=10)
+        self.plain.pack(fill="both", expand=True, pady=(6, 10))
 
-        cipher_frame = ttk.LabelFrame(mid, text="Ciphertext (no spaces; no quotes needed)", style="Panel.TLabelframe")
-        cipher_frame.pack(fill="both", expand=True, pady=(12, 0))
-
+        # Ciphertext
+        ttk.Label(outer, text="Ciphertext (no spaces; no quotes needed)", style="TLabel").pack(anchor="w")
         self.cipher = tk.Text(
-            cipher_frame,
-            height=8,
-            wrap="none",
-            bg=ENTRY_BG,
+            outer,
+            height=6,
+            bg=TEXT_BG,
             fg=FG,
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
-            highlightthickness=1,
-            borderwidth=0,
+            relief="flat",
+            wrap="none",
         )
-        self.cipher.pack(fill="both", expand=True, padx=10, pady=10)
+        self.cipher.pack(fill="both", expand=True, pady=(6, 12))
 
-        # --- Bottom buttons ---
-        bottom = ttk.Frame(self, style="Crimson.TFrame")
-        bottom.pack(fill="x", padx=16, pady=(0, 10))
+        # Buttons row
+        actions = ttk.Frame(outer, style="Panel.TFrame")
+        actions.pack(fill="x")
 
-        ttk.Button(bottom, text="Encrypt →", command=self.do_encrypt, style="Crimson.TButton").pack(side="left")
-        ttk.Button(bottom, text="← Decrypt", command=self.do_decrypt, style="Secondary.TButton").pack(
-            side="left", padx=(8, 0)
+        self.encrypt_btn = self._btn(actions, "Encrypt →", self.do_encrypt)
+        self.encrypt_btn.pack(side="left")
+
+        self.decrypt_btn = self._btn(actions, "← Decrypt", self.do_decrypt)
+        self.decrypt_btn.pack(side="left", padx=(10, 0))
+
+        self.copy_btn = self._btn(actions, "Copy Ciphertext", self.copy_cipher)
+        self.copy_btn.pack(side="left", padx=(10, 0))
+
+        self.clear_btn = self._btn(actions, "Clear Boxes", self.clear_boxes)
+        self.clear_btn.pack(side="right")
+
+        # Status bar
+        status = ttk.Frame(outer, style="Panel.TFrame")
+        status.pack(fill="x", pady=(10, 0))
+
+        self.status_label = ttk.Label(status, textvariable=self.status_var, style="Sub.TLabel")
+        self.status_label.pack(side="left")
+
+    def _btn(self, parent, text: str, cmd, mini: bool = False):
+        # Prefer tkmacosx Button if available (fixes “white ttk button” look)
+        if MacButton is not None:
+            return MacButton(
+                parent,
+                text=text,
+                command=cmd,
+                bg=ACCENT,
+                fg=FG,
+                activebackground=ACCENT_2,
+                activeforeground=FG,
+                borderless=1,
+                focuscolor="",
+                padx=10 if not mini else 8,
+                pady=6 if not mini else 4,
+                highlightthickness=0,
+            )
+
+        # Fallback: tk.Button (not ttk) so we can control colors
+        return tk.Button(
+            parent,
+            text=text,
+            command=cmd,
+            bg=ACCENT,
+            fg=FG,
+            activebackground=ACCENT_2,
+            activeforeground=FG,
+            relief="flat",
+            padx=10 if not mini else 8,
+            pady=6 if not mini else 4,
+            highlightthickness=0,
         )
-        ttk.Button(bottom, text="Copy Ciphertext", command=self.copy_cipher, style="Secondary.TButton").pack(
-            side="left", padx=(8, 0)
-        )
-        ttk.Button(bottom, text="Clear Text", command=self.clear_text, style="Secondary.TButton").pack(side="right")
 
-        # --- Status bar ---
-        status = ttk.Label(self, textvariable=self.status_var, style="Muted.TLabel")
-        status.pack(fill="x", padx=16, pady=(0, 12))
+    def _bind_events(self) -> None:
+        self.key_var.trace_add("write", lambda *_: self._update_key_strength())
 
-    # -------------------------
-    # Book management
-    # -------------------------
-    def add_books(self):
+    # ---------- logic ----------
+
+    def add_books(self) -> None:
         paths = filedialog.askopenfilenames(
             title="Add book text files",
             filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
@@ -217,80 +328,125 @@ class BookCipherApp(tk.Tk):
             return
 
         for p in paths:
-            if p not in self.book_paths:
-                self.book_paths.append(p)
+            pp = Path(p)
+            if pp not in self.book_paths:
+                self.book_paths.append(pp)
 
         self._refresh_books_list()
-        self.corpus_text = None
-        self.status_var.set(f"Added {len(paths)} book(s). Ready.")
+        self._on_books_changed()
 
-    def remove_selected(self):
+    def remove_selected(self) -> None:
         sel = list(self.books_list.curselection())
         if not sel:
             return
+        # remove in reverse order
         for i in reversed(sel):
-            del self.book_paths[i]
+            try:
+                del self.book_paths[i]
+            except Exception:
+                pass
         self._refresh_books_list()
-        self.corpus_text = None
-        self.status_var.set("Removed selected book(s).")
+        self._on_books_changed()
 
-    def _refresh_books_list(self):
+    def _refresh_books_list(self) -> None:
         self.books_list.delete(0, "end")
         for p in self.book_paths:
-            self.books_list.insert("end", Path(p).name)
+            self.books_list.insert("end", p.name)
 
-    def _get_corpus(self) -> str:
+    def _on_books_changed(self) -> None:
+        if self.book_paths:
+            self.status_var.set(f"Loaded {len(self.book_paths)} book(s). Ready.")
+        else:
+            self.status_var.set("Pick one or more .txt books to begin.")
+
+    def toggle_show_key(self) -> None:
+        self.show_key_var.set(not self.show_key_var.get())
+        if self.show_key_var.get():
+            self.key_entry.config(show="")
+        else:
+            self.key_entry.config(show="•")
+
+        # update button label ("Show" / "Hide")
+        # (find the sibling button by reading text isn't easy; simplest: set window focus and ignore)
+        # We'll just set status:
+        self.status_var.set("Key visible." if self.show_key_var.get() else "Key hidden.")
+
+    def _update_key_strength(self) -> None:
+        score, label = key_strength_score(self.key_var.get())
+        self.strength_value.set(score)
+        self.strength_var.set(f"Key strength: {label} ({score}/100)")
+
+    def _load_books_texts(self) -> list[str]:
         if not self.book_paths:
-            raise ValueError("No books added. Click 'Add Books (.txt)…' first.")
-        if self.corpus_text is None:
-            self.corpus_text = cipher_core.load_multiple_books(
-                self.book_paths,
-                autoclean=self.autoclean_var.get(),
-            )
-        return self.corpus_text
+            raise ValueError("No books selected.")
+        texts = []
+        for p in self.book_paths:
+            texts.append(p.read_text(encoding="utf-8", errors="replace"))
+        return texts
 
-    # -------------------------
-    # Crypto actions
-    # -------------------------
-    def do_encrypt(self):
+    def _require_key(self) -> str:
+        k = self.key_var.get()
+        if not k or not k.strip():
+            raise ValueError("Key is required.")
+        return k
+
+    def do_encrypt(self) -> None:
         try:
-            corpus = self._get_corpus()
+            key = self._require_key()
+            books = self._load_books_texts()
+            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
+
             msg = self.plain.get("1.0", "end").rstrip("\n")
             if not msg.strip():
                 raise ValueError("Plaintext is empty.")
-            key = self.key_var.get()
-            ct = cipher_core.encrypt(corpus, msg, key=key)
+
+            token = cipher_core.encrypt(msg, key, corpus)
+
             self.cipher.delete("1.0", "end")
-            self.cipher.insert("1.0", ct)
+            self.cipher.insert("1.0", token)
+
             self.status_var.set("Encrypted.")
         except Exception as e:
             messagebox.showerror("Encrypt failed", str(e))
+            self.status_var.set("Encrypt failed.")
 
-    def do_decrypt(self):
+    def do_decrypt(self) -> None:
         try:
-            corpus = self._get_corpus()
-            ct = self.cipher.get("1.0", "end").strip()
-            if not ct:
+            key = self._require_key()
+            books = self._load_books_texts()
+            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
+
+            token = self.cipher.get("1.0", "end").strip()
+            if not token:
                 raise ValueError("Ciphertext is empty.")
-            pt = cipher_core.decrypt(corpus, ct)
+
+            pt = cipher_core.decrypt(token, key, corpus)
+
             self.plain.delete("1.0", "end")
             self.plain.insert("1.0", pt)
+
             self.status_var.set("Decrypted.")
         except Exception as e:
             messagebox.showerror("Decrypt failed", str(e))
+            self.status_var.set("Decrypt failed.")
 
-    def copy_cipher(self):
-        ct = self.cipher.get("1.0", "end").strip()
+    def copy_cipher(self) -> None:
+        token = self.cipher.get("1.0", "end").strip()
+        if not token:
+            self.status_var.set("Nothing to copy.")
+            return
         self.clipboard_clear()
-        self.clipboard_append(ct)
+        self.clipboard_append(token)
         self.status_var.set("Ciphertext copied to clipboard.")
 
-    def clear_text(self):
+    def clear_boxes(self) -> None:
         self.plain.delete("1.0", "end")
         self.cipher.delete("1.0", "end")
-        self.status_var.set("Cleared.")
+        self.status_var.set("Cleared plaintext and ciphertext.")
 
 
 if __name__ == "__main__":
-    BookCipherApp().mainloop()
+    app = BookCipherApp()
+    app.minsize(860, 620)
+    app.mainloop()
 

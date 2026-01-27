@@ -11,3 +11,6 @@ build/
 # Local tooling
 *.log
 
+
+# Local test books
+books/
