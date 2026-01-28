@@ -30,7 +30,7 @@ ACCENT_2 = "#D7263D"
 FG = "#F3E9EC"
 MUTED = "#BCA7AE"
 BORDER = "#4A1A24"
-ENTRY_BG = "#220B13"      # FIX: was missing in your crash
+ENTRY_BG = "#220B13"  # FIX: was missing in your crash
 TEXT_BG = "#12060A"
 
 APP_TITLE = "BookCipher"
@@ -42,7 +42,7 @@ def key_strength_score(s: str) -> tuple[int, str]:
     Returns (0-100, label)
     """
     score, warnings_list = cipher_core.check_key_strength(s)
-    
+
     if score < 30:
         label = "Weak"
     elif score < 60:
@@ -75,7 +75,7 @@ class BookCipherApp(tk.Tk):
         self.status_var = tk.StringVar(value="Pick one or more .txt books to begin.")
         self.strength_var = tk.StringVar(value="Key strength: Empty")
         self.strength_value = tk.IntVar(value=0)
-        
+
         # Threading
         self._operation_thread: Optional[threading.Thread] = None
         self._processing = tk.BooleanVar(value=False)
@@ -159,7 +159,6 @@ class BookCipherApp(tk.Tk):
         top.pack(fill="x", pady=(0, 10))
 
         self._btn(top, "Add Books (.txt)…", self.add_books).pack(side="left")
-        self._btn(top, "Remove Selected", self.remove_selected).pack(side="left", padx=(8, 0))
 
         ttk.Checkbutton(
             top,
@@ -204,14 +203,18 @@ class BookCipherApp(tk.Tk):
         )
         self.strength_bar.pack(side="left", padx=(10, 0))
 
-        # Books list
+        # Books list with numbering and drag-drop support
         books_box = ttk.Frame(outer, style="Panel.TFrame")
         books_box.pack(fill="both", expand=False)
 
-        ttk.Label(books_box, text="Books (combined into one corpus)", style="TLabel").pack(anchor="w")
+        ttk.Label(books_box, text="Books (combined into one corpus) — Drag to reorder", style="TLabel").pack(anchor="w")
+
+        # Create frame for listbox and controls
+        books_frame = ttk.Frame(books_box, style="Panel.TFrame")
+        books_frame.pack(fill="x", pady=(6, 0))
 
         self.books_list = tk.Listbox(
-            books_box,
+            books_frame,
             bg=TEXT_BG,
             fg=FG,
             highlightbackground=BORDER,
@@ -221,7 +224,26 @@ class BookCipherApp(tk.Tk):
             relief="flat",
             height=5,
         )
-        self.books_list.pack(fill="x", pady=(6, 10))
+        self.books_list.pack(side="left", fill="both", expand=True)
+        
+        # Add vertical scrollbar
+        scrollbar = ttk.Scrollbar(books_frame, orient="vertical", command=self.books_list.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.books_list.config(yscrollcommand=scrollbar.set)
+
+        # Reorder buttons
+        btn_frame = ttk.Frame(books_box, style="Panel.TFrame")
+        btn_frame.pack(fill="x", pady=(6, 10))
+        
+        self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
+        self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
+        self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
+        
+        # Bind drag-drop events
+        self.books_list.bind("<Button-1>", self._on_listbox_press)
+        self.books_list.bind("<B1-Motion>", self._on_listbox_drag)
+        self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
+        self._drag_start_index = None
 
         # Plaintext
         ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
@@ -344,9 +366,69 @@ class BookCipherApp(tk.Tk):
         self._on_books_changed()
 
     def _refresh_books_list(self) -> None:
+        """Refresh books list with numbering."""
         self.books_list.delete(0, "end")
-        for p in self.book_paths:
-            self.books_list.insert("end", p.name)
+        for i, p in enumerate(self.book_paths, 1):
+            # Display: "1. filename.txt"
+            self.books_list.insert("end", f"{i}. {p.name}")
+    
+    def move_book_up(self) -> None:
+        """Move selected book up in the list."""
+        sel = list(self.books_list.curselection())
+        if not sel or sel[0] == 0:
+            return
+        idx = sel[0]
+        # Swap with previous
+        self.book_paths[idx], self.book_paths[idx - 1] = self.book_paths[idx - 1], self.book_paths[idx]
+        self._refresh_books_list()
+        self.books_list.selection_set(idx - 1)
+        self._on_books_changed()
+    
+    def move_book_down(self) -> None:
+        """Move selected book down in the list."""
+        sel = list(self.books_list.curselection())
+        if not sel or sel[0] == len(self.book_paths) - 1:
+            return
+        idx = sel[0]
+        # Swap with next
+        self.book_paths[idx], self.book_paths[idx + 1] = self.book_paths[idx + 1], self.book_paths[idx]
+        self._refresh_books_list()
+        self.books_list.selection_set(idx + 1)
+        self._on_books_changed()
+    
+    def _on_listbox_press(self, event: tk.Event) -> None:
+        """Handle mouse press for drag-start."""
+        selection = self.books_list.curselection()
+        if selection:
+            self._drag_start_index = selection[0]
+    
+    def _on_listbox_drag(self, event: tk.Event) -> None:
+        """Handle dragging (visual feedback)."""
+        if self._drag_start_index is not None:
+            # Just select the current item under mouse for visual feedback
+            idx = self.books_list.nearest(event.y)
+            if idx >= 0:
+                self.books_list.selection_clear(0, "end")
+                self.books_list.selection_set(idx)
+    
+    def _on_listbox_release(self, event: tk.Event) -> None:
+        """Handle mouse release for drag-drop."""
+        if self._drag_start_index is None:
+            return
+        
+        idx = self.books_list.nearest(event.y)
+        if idx < 0 or idx == self._drag_start_index:
+            self._drag_start_index = None
+            return
+        
+        # Move book from start to drop position
+        book = self.book_paths.pop(self._drag_start_index)
+        self.book_paths.insert(idx, book)
+        
+        self._refresh_books_list()
+        self.books_list.selection_set(idx)
+        self._on_books_changed()
+        self._drag_start_index = None
 
     def _on_books_changed(self) -> None:
         if self.book_paths:
@@ -390,43 +472,39 @@ class BookCipherApp(tk.Tk):
         if self._processing.get():
             messagebox.showwarning("In Progress", "Another operation is in progress.")
             return
-        
+
         try:
             key = self._require_key()
             books = self._load_books_texts()
             msg = self.plain.get("1.0", "end").rstrip("\n")
             if not msg.strip():
                 raise ValueError("Plaintext is empty.")
-            
+
             self._processing.set(True)
             self.encrypt_btn.config(state="disabled")
             self.decrypt_btn.config(state="disabled")
             self.status_var.set("Encrypting... (this may take ~100ms)")
-            
+
             # Run in background thread
-            thread = threading.Thread(
-                target=self._encrypt_worker,
-                args=(key, books, msg),
-                daemon=True
-            )
+            thread = threading.Thread(target=self._encrypt_worker, args=(key, books, msg), daemon=True)
             self._operation_thread = thread
             thread.start()
         except Exception as e:
             self._processing.set(False)
             messagebox.showerror("Encrypt failed", str(e))
             self.status_var.set("Encrypt failed.")
-    
+
     def _encrypt_worker(self, key: str, books: list[str], msg: str) -> None:
         """Background worker for encryption."""
         try:
             corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
             token = cipher_core.encrypt(msg, key, corpus)
-            
+
             # Update UI on main thread
             self.after(0, self._encrypt_done, token)
         except Exception as e:
             self.after(0, self._encrypt_error, str(e))
-    
+
     def _encrypt_done(self, token: str) -> None:
         """Called when encryption completes (on main thread)."""
         self.cipher.delete("1.0", "end")
@@ -435,7 +513,7 @@ class BookCipherApp(tk.Tk):
         self.encrypt_btn.config(state="normal")
         self.decrypt_btn.config(state="normal")
         self._processing.set(False)
-    
+
     def _encrypt_error(self, error: str) -> None:
         """Called if encryption fails (on main thread)."""
         messagebox.showerror("Encrypt failed", error)
@@ -449,43 +527,39 @@ class BookCipherApp(tk.Tk):
         if self._processing.get():
             messagebox.showwarning("In Progress", "Another operation is in progress.")
             return
-        
+
         try:
             key = self._require_key()
             books = self._load_books_texts()
             token = self.cipher.get("1.0", "end").strip()
             if not token:
                 raise ValueError("Ciphertext is empty.")
-            
+
             self._processing.set(True)
             self.encrypt_btn.config(state="disabled")
             self.decrypt_btn.config(state="disabled")
             self.status_var.set("Decrypting... (this may take ~100ms)")
-            
+
             # Run in background thread
-            thread = threading.Thread(
-                target=self._decrypt_worker,
-                args=(key, books, token),
-                daemon=True
-            )
+            thread = threading.Thread(target=self._decrypt_worker, args=(key, books, token), daemon=True)
             self._operation_thread = thread
             thread.start()
         except Exception as e:
             self._processing.set(False)
             messagebox.showerror("Decrypt failed", str(e))
             self.status_var.set("Decrypt failed.")
-    
+
     def _decrypt_worker(self, key: str, books: list[str], token: str) -> None:
         """Background worker for decryption."""
         try:
             corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
             pt = cipher_core.decrypt(token, key, corpus)
-            
+
             # Update UI on main thread
             self.after(0, self._decrypt_done, pt)
         except Exception as e:
             self.after(0, self._decrypt_error, str(e))
-    
+
     def _decrypt_done(self, pt: str) -> None:
         """Called when decryption completes (on main thread)."""
         self.plain.delete("1.0", "end")
@@ -494,7 +568,7 @@ class BookCipherApp(tk.Tk):
         self.encrypt_btn.config(state="normal")
         self.decrypt_btn.config(state="normal")
         self._processing.set(False)
-    
+
     def _decrypt_error(self, error: str) -> None:
         """Called if decryption fails (on main thread)."""
         messagebox.showerror("Decrypt failed", error)
@@ -522,4 +596,3 @@ if __name__ == "__main__":
     app = BookCipherApp()
     app.minsize(860, 620)
     app.mainloop()
-
