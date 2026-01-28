@@ -229,8 +229,9 @@ class BookCipherApp(tk.Tk):
             relief="flat",
             height=4,
             exportselection=False,
+            width=60,
         )
-        self.books_list.pack(side="left", fill="x", expand=False)
+        self.books_list.pack(side="left", fill="both", expand=True)
 
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(books_frame, orient="vertical", command=self.books_list.yview)
@@ -244,6 +245,7 @@ class BookCipherApp(tk.Tk):
         self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
+        self._btn(btn_frame, "Randomize Order", self.randomize_books).pack(side="left", padx=(10, 0))
 
         # Bind drag-drop events
         self.books_list.bind("<Button-1>", self._on_listbox_press)
@@ -251,10 +253,14 @@ class BookCipherApp(tk.Tk):
         self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
         self._drag_start_index = None
 
+        # Main content area for text widgets and actions (restored)
+        content = ttk.Frame(outer, style="Panel.TFrame")
+        content.pack(fill="both", expand=True)
+
         # Plaintext
-        ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
+        ttk.Label(content, text="Plaintext", style="TLabel").pack(anchor="w")
         self.plain = tk.Text(
-            outer,
+            content,
             height=7,
             bg=TEXT_BG,
             fg=FG,
@@ -267,9 +273,9 @@ class BookCipherApp(tk.Tk):
         self.plain.pack(fill="both", expand=True, pady=(6, 10))
 
         # Ciphertext
-        ttk.Label(outer, text="Ciphertext (no spaces; no quotes needed)", style="TLabel").pack(anchor="w")
+        ttk.Label(content, text="Ciphertext (no spaces; no quotes needed)", style="TLabel").pack(anchor="w")
         self.cipher = tk.Text(
-            outer,
+            content,
             height=6,
             bg=TEXT_BG,
             fg=FG,
@@ -282,7 +288,7 @@ class BookCipherApp(tk.Tk):
         self.cipher.pack(fill="both", expand=True, pady=(6, 12))
 
         # Buttons row
-        actions = ttk.Frame(outer, style="Panel.TFrame")
+        actions = ttk.Frame(content, style="Panel.TFrame")
         actions.pack(fill="x")
 
         self.encrypt_btn = self._btn(actions, "Encrypt →", self.do_encrypt)
@@ -298,11 +304,21 @@ class BookCipherApp(tk.Tk):
         self.clear_btn.pack(side="right")
 
         # Status bar
-        status = ttk.Frame(outer, style="Panel.TFrame")
+        status = ttk.Frame(content, style="Panel.TFrame")
         status.pack(fill="x", pady=(10, 0))
 
         self.status_label = ttk.Label(status, textvariable=self.status_var, style="Sub.TLabel")
         self.status_label.pack(side="left")
+
+    def randomize_books(self) -> None:
+        """Randomize the order of the selected books."""
+        import random
+
+        if not self.book_paths:
+            return
+        random.shuffle(self.book_paths)
+        self._refresh_books_list()
+        self._on_books_changed()
 
     def _btn(self, parent, text: str, cmd, mini: bool = False):
         # Prefer tkmacosx Button if available (fixes “white ttk button” look)
@@ -372,10 +388,10 @@ class BookCipherApp(tk.Tk):
         self._on_books_changed()
 
     def _refresh_books_list(self) -> None:
-        """Refresh books list with numbering."""
+        """Refresh books list with numbering and full title."""
         self.books_list.delete(0, "end")
         for i, p in enumerate(self.book_paths, 1):
-            # Display: "1. filename.txt"
+            # Display: "1. full filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
 
     def _set_books_selection(self, index: int) -> None:
