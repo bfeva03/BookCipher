@@ -476,6 +476,8 @@ class BookCipherApp(tk.Tk):
             self.status_var.set(f"Loaded {len(self.book_paths)} book(s). Ready.")
         else:
             self.status_var.set("Pick one or more .txt books to begin.")
+        # Force UI layout recalculation to ensure all widgets remain visible
+        self.update_idletasks()
 
     def toggle_show_key(self) -> None:
         self.show_key_var.set(not self.show_key_var.get())
