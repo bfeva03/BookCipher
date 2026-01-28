@@ -1,71 +1,130 @@
-📕 BookCipher
-BookCipher is a macOS desktop app that implements a hybrid book cipher using public-domain texts. It converts plaintext into compact ciphertext using word positions, with optional deterministic keying for repeatable results.
+# 📕 BookCipher
+
+BookCipher is a macOS desktop app and Python CLI that implements **authenticated, book-bound encryption** using public-domain texts. It encrypts plaintext into compact, verifiable ciphertext that is cryptographically bound to a specific set of books and can only be decrypted with the correct key and book corpus.
+
 Designed for experimentation, learning, and cryptographic curiosity.
 
-✨ Features
-* 🔐 Hybrid book cipher
-* 📚 Combine multiple .txt books into one cipher corpus
-* 🧹 Optional auto-cleaning of Project Gutenberg headers
-* 🔑 Optional key (same key → same output)
-* 🧾 Compact ciphertext (no spaces, no quotes needed)
-* 🖥 Native macOS app (no terminal required)
-* 🎨 Custom app icon and dark UI theme
+## ✨ Features
 
-🖼 Interface Overview
-* Books panel — add one or more .txt files
-* Plaintext — enter or paste text to encrypt
-* Ciphertext — compact output, ready to copy
-* Encrypt / Decrypt buttons
-* Key (optional) — makes encryption deterministic
+* 🔐 **AES-256-GCM authenticated encryption** — tamper detection and authentication verification
+* 📚 **Multi-book corpus** — combine multiple .txt files into one cipher corpus
+* 🔑 **Passphrase-based key derivation** — Scrypt KDF for brute-force resistance
+* 🧹 **Auto-cleaning of Project Gutenberg headers** — removes boilerplate automatically
+* 🧾 **Compact tokens** — base64url-encoded, no spaces or quotes needed
+* **Corpus binding** — ciphertext is cryptographically bound to book order and content (SHA-256 hash)
+* 🖥 **Dual interface** — Native macOS Tkinter app or command-line CLI
+* 🎨 **Dark theme UI** — crimson and charcoal color scheme
 
-📥 Installation
-1. Download the .dmg
-2. Open it
-3. Drag BookCipher into your Applications folder
-First launch (important)
-Because this app is not notarized by Apple:
-1. Right-click BookCipher
-2. Click Open
-3. Click Open again
-This is required once only. It’s a standard macOS security step for independent apps.
+## 🔐 How It Works
 
-📚 Supported Book Files
+### Encryption Pipeline
+1. **Build corpus**: Load one or more .txt book files, optionally strip Project Gutenberg headers
+2. **Hash corpus**: Compute SHA-256 of combined text (corpus binding)
+3. **Derive key**: Use Scrypt(passphrase, salt) to generate 32-byte encryption key
+4. **Encrypt**: AES-256-GCM encrypts plaintext with corpus hash as Additional Authenticated Data (AAD)
+5. **Pack token**: `BC1.<salt>.<nonce>.<corpus_hash>.<ciphertext>` (all base64url-encoded)
+
+### Decryption Pipeline
+1. **Parse token**: Extract salt, nonce, embedded corpus hash, and ciphertext
+2. **Verify corpus**: Compare embedded hash against current book corpus (fails if wrong books/order)
+3. **Derive key**: Scrypt(passphrase, salt) regenerates the encryption key
+4. **Decrypt & verify**: AES-256-GCM decrypts; authentication fails if key is wrong or ciphertext modified
+5. **Output**: Recovered plaintext
+
+### Security Properties
+* **Authentication**: AES-GCM provides built-in authentication (tampering immediately detected)
+* **Key derivation**: Scrypt with n=2^15, r=8, p=1 resists brute-force attacks
+* **Corpus binding**: Ciphertext fails to decrypt if book order changes or text is modified
+* **Random salt & nonce**: Each encryption generates fresh salt and nonce (two identical plaintexts produce different ciphertexts)
+
+## 🖼 Desktop App Interface
+
+* **Books panel** — add one or more .txt files (drag & drop or file browser)
+* **Plaintext area** — enter or paste text to encrypt
+* **Key field** — passphrase (required for both encryption and decryption)
+* **Key strength meter** — visual indicator of passphrase quality (empty → strong)
+* **Ciphertext area** — compact output, ready to copy/share
+* **Encrypt / Decrypt buttons** — perform the operation
+* **Status messages** — real-time feedback on success or errors
+
+## 💻 CLI Usage
+
+```bash
+# Basic encryption
+python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" encrypt --message "Hello World"
+
+# Encrypt with multiple books
+python book_cipher.py --book book1.txt --book book2.txt --key "my_key" encrypt --message "Secret"
+
+# Decrypt a token
+python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" decrypt --cipher "BC1.xxx.yyy.zzz..."
+
+# Interactive mode (prompts for input)
+python book_cipher.py --book books/alice.txt --key "secret" encrypt
+python book_cipher.py --book books/alice.txt --key "secret" decrypt
+
+# Disable Gutenberg auto-cleaning
+python book_cipher.py --book custom.txt --key "key" --no-autoclean encrypt --message "text"
+```
+
+## 📚 Supported Book Files
+
 * Plain text (.txt)
 * UTF-8 recommended
-* Public-domain texts work best (e.g. Project Gutenberg)
-Examples:
-* Alice’s Adventures in Wonderland
+* Project Gutenberg texts work best (headers auto-removed via regex)
+
+Example books:
+* Alice's Adventures in Wonderland
 * Pride and Prejudice
-* Gulliver’s Travels
+* Gulliver's Travels
 * The Adventures of Tom Sawyer
 
-🔐 Cipher Notes
-* Encryption uses word indexing, not substitution
-* Ciphertext cannot be decrypted without the same book corpus
-* Using a key seeds the cipher for reproducibility
-* Capitalization and punctuation are preserved in output
-This app is intended for educational and experimental use, not for secure communications.
+## 📥 Installation
 
-🛠 Built With
-* Python
-* Tkinter
-* PyInstaller
-* macOS ad-hoc code signing
+### macOS Desktop App
+1. Download the .dmg from Releases
+2. Open it
+3. Drag BookCipher into your Applications folder
+4. **First launch**: Right-click BookCipher → Open → Open again (required once for unsigned apps on macOS)
 
-⚠ Security & Privacy
-* No network access
-* No telemetry
-* No data collection
-* All processing is local
+### Python CLI
+```bash
+pip install cryptography
+python book_cipher.py --help
+```
 
-📄 License
-MIT License You’re free to use, modify, and share.
+## 🏗 Module Structure
 
-💡 Why This Exists
+* **`cipher_core.py`** — Core encryption/decryption, corpus building, Scrypt KDF, AES-256-GCM
+* **`book_cipher.py`** — Command-line interface with argparse
+* **`BookCipherApp.py`** — Tkinter desktop app with GUI, dark theme, key strength meter
+* **`word_cipher.py`** — Legacy/experimental cipher variant (not actively used)
+* **`hybrid_cipher.py`** — Hybrid cipher variant (not actively used)
+* **`app_version.py`** — Version string for app distribution
+
+## 🛠 Built With
+
+* **Python 3.8+**
+* **cryptography** — AES-256-GCM, Scrypt KDF, secure random generation
+* **tkinter** — GUI framework (macOS native)
+* **PyInstaller** — Desktop app bundling and distribution
+* **base64** — URL-safe encoding for compact tokens
+
+## ⚠️ Disclaimer
+
+This project is **for educational and experimental use only**. It is not recommended for securing high-value secrets or for professional cryptographic applications. The underlying cipher (AES-256-GCM) is sound, but this implementation has not undergone professional security audits.
+
+## 📄 License
+
+MIT License — You're free to use, modify, and share.
+
+## 💡 Why This Exists
+
 BookCipher was built as an exploration of:
-* Classical cipher techniques
-* Deterministic randomness
-* macOS app packaging
-* Clean UI for cryptographic tools
+* Classical cipher techniques with modern cryptography
+* Book-bound encryption as a learning tool
+* Deterministic randomness and corpus binding
+* macOS app packaging and distribution
+* Clean UI design for cryptographic tools
 
 
