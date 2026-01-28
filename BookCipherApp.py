@@ -185,7 +185,8 @@ class BookCipherApp(tk.Tk):
         )
         self.key_entry.pack(side="left")
 
-        self._btn(top, "Show", self.toggle_show_key, mini=True).pack(side="left", padx=(8, 0))
+        self.show_key_btn = self._btn(top, "Show", self.toggle_show_key, mini=True)
+        self.show_key_btn.pack(side="left", padx=(8, 0))
 
         # Strength meter
         strength_row = ttk.Frame(outer, style="Panel.TFrame")
@@ -205,9 +206,13 @@ class BookCipherApp(tk.Tk):
 
         # Books list with numbering and drag-drop support
         books_box = ttk.Frame(outer, style="Panel.TFrame")
-        books_box.pack(fill="both", expand=False)
+        books_box.pack(fill="x", expand=False)
 
-        ttk.Label(books_box, text="Books (combined into one corpus) — Drag to reorder", style="TLabel").pack(anchor="w")
+        ttk.Label(
+            books_box,
+            text="Books (combined into one corpus) — Drag to reorder",
+            style="TLabel",
+        ).pack(anchor="w")
 
         # Create frame for listbox and controls
         books_frame = ttk.Frame(books_box, style="Panel.TFrame")
@@ -222,9 +227,10 @@ class BookCipherApp(tk.Tk):
             selectbackground=ACCENT,
             selectforeground=FG,
             relief="flat",
-            height=5,
+            height=4,
+            exportselection=False,
         )
-        self.books_list.pack(side="left", fill="both", expand=True)
+        self.books_list.pack(side="left", fill="x", expand=False)
 
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(books_frame, orient="vertical", command=self.books_list.yview)
@@ -372,6 +378,17 @@ class BookCipherApp(tk.Tk):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
 
+    def _set_books_selection(self, index: int) -> None:
+        """Keep selection visible when moving items."""
+        if not self.book_paths:
+            return
+        index = max(0, min(index, len(self.book_paths) - 1))
+        self.books_list.selection_clear(0, "end")
+        self.books_list.selection_set(index)
+        self.books_list.activate(index)
+        self.books_list.see(index)
+        self.books_list.focus_set()
+
     def move_book_up(self) -> None:
         """Move selected book up in the list."""
         sel = list(self.books_list.curselection())
@@ -381,7 +398,7 @@ class BookCipherApp(tk.Tk):
         # Swap with previous
         self.book_paths[idx], self.book_paths[idx - 1] = self.book_paths[idx - 1], self.book_paths[idx]
         self._refresh_books_list()
-        self.books_list.selection_set(idx - 1)
+        self._set_books_selection(idx - 1)
         self._on_books_changed()
 
     def move_book_down(self) -> None:
@@ -393,7 +410,7 @@ class BookCipherApp(tk.Tk):
         # Swap with next
         self.book_paths[idx], self.book_paths[idx + 1] = self.book_paths[idx + 1], self.book_paths[idx]
         self._refresh_books_list()
-        self.books_list.selection_set(idx + 1)
+        self._set_books_selection(idx + 1)
         self._on_books_changed()
 
     def _on_listbox_press(self, event: tk.Event) -> None:
@@ -421,10 +438,10 @@ class BookCipherApp(tk.Tk):
             # Moving up
             book = self.book_paths.pop(self._drag_start_index)
             self.book_paths.insert(drop_index, book)
-        
+
         # Update display with animation effect
         self._refresh_books_list()
-        self.books_list.selection_set(drop_index)
+        self._set_books_selection(drop_index)
         self._drag_start_index = drop_index
         self._on_books_changed()
 
@@ -442,8 +459,10 @@ class BookCipherApp(tk.Tk):
         self.show_key_var.set(not self.show_key_var.get())
         if self.show_key_var.get():
             self.key_entry.config(show="")
+            self.show_key_btn.config(text="Hide")
         else:
             self.key_entry.config(show="•")
+            self.show_key_btn.config(text="Show")
 
         # update button label ("Show" / "Hide")
         # (find the sibling button by reading text isn't easy; simplest: set window focus and ignore)
@@ -596,5 +615,6 @@ class BookCipherApp(tk.Tk):
 
 if __name__ == "__main__":
     app = BookCipherApp()
+    app.geometry("980x720")
     app.minsize(860, 620)
     app.mainloop()

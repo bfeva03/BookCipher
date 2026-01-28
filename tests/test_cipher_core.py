@@ -3,8 +3,18 @@ Unit tests for cipher_core module.
 Tests encryption, decryption, key strength, and BC1/BC2 compatibility.
 """
 
+import importlib.util
+
 import pytest
-import cipher_core
+
+CRYPT_AVAILABLE = importlib.util.find_spec("cryptography") is not None
+pytestmark = pytest.mark.skipif(
+    not CRYPT_AVAILABLE,
+    reason="cryptography is required for cipher tests",
+)
+
+if CRYPT_AVAILABLE:
+    import cipher_core
 
 
 class TestKeyStrength:
