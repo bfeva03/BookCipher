@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+import time
 
 import cipher_core
 
@@ -225,7 +226,7 @@ class BookCipherApp(tk.Tk):
             height=5,
         )
         self.books_list.pack(side="left", fill="both", expand=True)
-        
+
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(books_frame, orient="vertical", command=self.books_list.yview)
         scrollbar.pack(side="right", fill="y")
@@ -234,16 +235,17 @@ class BookCipherApp(tk.Tk):
         # Reorder buttons
         btn_frame = ttk.Frame(books_box, style="Panel.TFrame")
         btn_frame.pack(fill="x", pady=(6, 10))
-        
+
         self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
-        
+
         # Bind drag-drop events
         self.books_list.bind("<Button-1>", self._on_listbox_press)
         self.books_list.bind("<B1-Motion>", self._on_listbox_drag)
         self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
         self._drag_start_index = None
+        self._last_drop_index = None
 
         # Plaintext
         ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
@@ -371,7 +373,7 @@ class BookCipherApp(tk.Tk):
         for i, p in enumerate(self.book_paths, 1):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
-    
+
     def move_book_up(self) -> None:
         """Move selected book up in the list."""
         sel = list(self.books_list.curselection())
@@ -383,7 +385,7 @@ class BookCipherApp(tk.Tk):
         self._refresh_books_list()
         self.books_list.selection_set(idx - 1)
         self._on_books_changed()
-    
+
     def move_book_down(self) -> None:
         """Move selected book down in the list."""
         sel = list(self.books_list.curselection())
@@ -395,36 +397,59 @@ class BookCipherApp(tk.Tk):
         self._refresh_books_list()
         self.books_list.selection_set(idx + 1)
         self._on_books_changed()
-    
+
     def _on_listbox_press(self, event: tk.Event) -> None:
         """Handle mouse press for drag-start."""
         selection = self.books_list.curselection()
         if selection:
             self._drag_start_index = selection[0]
-    
+            self._last_drop_index = self._drag_start_index
+
     def _on_listbox_drag(self, event: tk.Event) -> None:
-        """Handle dragging - move book in real-time as user drags."""
+        """Handle dragging - move book in real-time as user drags with animation."""
         if self._drag_start_index is None:
             return
-        
+
         # Get the item under the current mouse position
         drop_index = self.books_list.nearest(event.y)
-        if drop_index < 0 or drop_index == self._drag_start_index:
+        if drop_index < 0:
             return
         
-        # Move the book immediately during drag
-        book = self.book_paths.pop(self._drag_start_index)
-        self.book_paths.insert(drop_index, book)
+        # Only animate if drop position actually changed
+        if drop_index == self._last_drop_index:
+            return
+
+        # Determine swap direction
+        direction = 1 if drop_index > self._last_drop_index else -1
         
-        # Update display
-        self._refresh_books_list()
-        self.books_list.selection_set(drop_index)
-        self._drag_start_index = drop_index  # Update drag start to new position
+        # Animate the swap
+        start_idx = self._last_drop_index
+        end_idx = drop_index
+        
+        # Swap adjacent items with animation
+        idx = start_idx
+        while idx != end_idx:
+            next_idx = idx + direction
+            book1 = self.book_paths[idx]
+            book2 = self.book_paths[next_idx]
+            self.book_paths[idx], self.book_paths[next_idx] = book2, book1
+            
+            # Update display and add small delay for animation effect
+            self._refresh_books_list()
+            self.books_list.selection_set(next_idx)
+            self.books_list.update()
+            time.sleep(0.05)  # 50ms per swap for smooth animation
+            
+            idx = next_idx
+        
+        self._drag_start_index = drop_index
+        self._last_drop_index = drop_index
         self._on_books_changed()
-    
+
     def _on_listbox_release(self, event: tk.Event) -> None:
         """Handle mouse release - just cleanup."""
         self._drag_start_index = None
+        self._last_drop_index = None
 
     def _on_books_changed(self) -> None:
         if self.book_paths:
