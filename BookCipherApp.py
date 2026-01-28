@@ -403,31 +403,27 @@ class BookCipherApp(tk.Tk):
             self._drag_start_index = selection[0]
     
     def _on_listbox_drag(self, event: tk.Event) -> None:
-        """Handle dragging (visual feedback)."""
-        if self._drag_start_index is not None:
-            # Just select the current item under mouse for visual feedback
-            idx = self.books_list.nearest(event.y)
-            if idx >= 0:
-                self.books_list.selection_clear(0, "end")
-                self.books_list.selection_set(idx)
-    
-    def _on_listbox_release(self, event: tk.Event) -> None:
-        """Handle mouse release for drag-drop."""
+        """Handle dragging - move book in real-time as user drags."""
         if self._drag_start_index is None:
             return
         
-        idx = self.books_list.nearest(event.y)
-        if idx < 0 or idx == self._drag_start_index:
-            self._drag_start_index = None
+        # Get the item under the current mouse position
+        drop_index = self.books_list.nearest(event.y)
+        if drop_index < 0 or drop_index == self._drag_start_index:
             return
         
-        # Move book from start to drop position
+        # Move the book immediately during drag
         book = self.book_paths.pop(self._drag_start_index)
-        self.book_paths.insert(idx, book)
+        self.book_paths.insert(drop_index, book)
         
+        # Update display
         self._refresh_books_list()
-        self.books_list.selection_set(idx)
+        self.books_list.selection_set(drop_index)
+        self._drag_start_index = drop_index  # Update drag start to new position
         self._on_books_changed()
+    
+    def _on_listbox_release(self, event: tk.Event) -> None:
+        """Handle mouse release - just cleanup."""
         self._drag_start_index = None
 
     def _on_books_changed(self) -> None:
