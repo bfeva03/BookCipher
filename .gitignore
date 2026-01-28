@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+*.egg-info/
 
 # PyInstaller outputs (don’t commit)
 dist/
