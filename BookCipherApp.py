@@ -228,7 +228,8 @@ class BookCipherApp(tk.Tk):
         self.strength_bar.pack(side="left", padx=(10, 0))
 
         # Books list with numbering and drag-drop support
-            books_box.pack(fill="x", expand=False)
+        books_box = ttk.Frame(outer, style="Panel.TFrame")
+        books_box.pack(fill="x", expand=False)
 
         ttk.Label(books_box, text="Books (combined into one corpus) — Drag to reorder", style="TLabel").pack(anchor="w")
 
@@ -270,13 +271,6 @@ class BookCipherApp(tk.Tk):
         self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "Randomize Order", self.randomize_books).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
-
-    def randomize_books(self) -> None:
-        import random
-        if len(self.book_paths) > 1:
-            random.shuffle(self.book_paths)
-            self._refresh_books_list()
-            self._on_books_changed()
 
         # Plaintext
         ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
@@ -404,6 +398,14 @@ class BookCipherApp(tk.Tk):
         for i, p in enumerate(self.book_paths, 1):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
+
+    def randomize_books(self) -> None:
+        """Randomize the order of books in the list."""
+        import random
+        if len(self.book_paths) > 1:
+            random.shuffle(self.book_paths)
+            self._refresh_books_list()
+            self._on_books_changed()
 
     def move_book_up(self) -> None:
         """Move selected book up in the list."""
