@@ -403,6 +403,8 @@ class BookCipherApp(tk.Tk):
         for i, p in enumerate(self.book_paths, 1):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
+        # Force UI layout recalculation after modifying listbox
+        self.update_idletasks()
 
     def randomize_books(self) -> None:
         """Randomize the order of books in the list."""
@@ -476,8 +478,6 @@ class BookCipherApp(tk.Tk):
             self.status_var.set(f"Loaded {len(self.book_paths)} book(s). Ready.")
         else:
             self.status_var.set("Pick one or more .txt books to begin.")
-        # Force UI layout recalculation to ensure all widgets remain visible
-        self.update_idletasks()
 
     def toggle_show_key(self) -> None:
         self.show_key_var.set(not self.show_key_var.get())
