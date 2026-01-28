@@ -208,7 +208,8 @@ class BookCipherApp(tk.Tk):
         )
         self.key_entry.pack(side="left")
 
-        self._btn(top, "Show", self.toggle_show_key, mini=True).pack(side="left", padx=(8, 0))
+        self.show_key_btn = self._btn(top, "Show", self.toggle_show_key, mini=True)
+        self.show_key_btn.pack(side="left", padx=(8, 0))
 
         # Strength meter
         strength_row = ttk.Frame(outer, style="Panel.TFrame")
@@ -227,8 +228,7 @@ class BookCipherApp(tk.Tk):
         self.strength_bar.pack(side="left", padx=(10, 0))
 
         # Books list with numbering and drag-drop support
-        books_box = ttk.Frame(outer, style="Panel.TFrame")
-        books_box.pack(fill="both", expand=False)
+            books_box.pack(fill="x", expand=False)
 
         ttk.Label(books_box, text="Books (combined into one corpus) — Drag to reorder", style="TLabel").pack(anchor="w")
 
@@ -245,7 +245,6 @@ class BookCipherApp(tk.Tk):
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
             relief="flat",
-            activestyle="none",
             height=6,
             selectbackground=ACCENT_2,
             selectforeground=FG,
@@ -476,12 +475,11 @@ class BookCipherApp(tk.Tk):
         self.show_key_var.set(not self.show_key_var.get())
         if self.show_key_var.get():
             self.key_entry.config(show="")
+            self.show_key_btn.config(text="Hide")
         else:
             self.key_entry.config(show="•")
+            self.show_key_btn.config(text="Show")
 
-        # update button label ("Show" / "Hide")
-        # (find the sibling button by reading text isn't easy; simplest: set window focus and ignore)
-        # We'll just set status:
         self.status_var.set("Key visible." if self.show_key_var.get() else "Key hidden.")
 
     def _update_key_strength(self) -> None:
