@@ -20,9 +20,9 @@ Designed for experimentation, learning, and cryptographic curiosity.
 ### Encryption Pipeline
 1. **Build corpus**: Load one or more .txt book files, optionally strip Project Gutenberg headers
 2. **Hash corpus**: Compute SHA-256 of combined text (corpus binding)
-3. **Derive key**: Use Scrypt(passphrase, salt) to generate 32-byte encryption key
+3. **Derive key**: Use Scrypt(passphrase, salt, n=2^17) + HKDF for 32-byte encryption key
 4. **Encrypt**: AES-256-GCM encrypts plaintext with corpus hash as Additional Authenticated Data (AAD)
-5. **Pack token**: `BC1.<salt>.<nonce>.<corpus_hash>.<ciphertext>` (all base64url-encoded)
+5. **Pack token**: `BC2.<salt>.<nonce>.<corpus_hash>.<ciphertext>` (all base64url-encoded)
 
 ### Decryption Pipeline
 1. **Parse token**: Extract salt, nonce, embedded corpus hash, and ciphertext
@@ -32,10 +32,13 @@ Designed for experimentation, learning, and cryptographic curiosity.
 5. **Output**: Recovered plaintext
 
 ### Security Properties
-* **Authentication**: AES-GCM provides built-in authentication (tampering immediately detected)
-* **Key derivation**: Scrypt with n=2^15, r=8, p=1 resists brute-force attacks
+* **Authentication**: AES-256-GCM provides built-in authentication (tampering immediately detected)
+* **Key derivation**: Scrypt with n=2^17, r=8, p=1 resists brute-force attacks (4x stronger than v1)
+* **HKDF expansion**: Additional security layer for proper key stretching
+* **Constant-time comparison**: Corpus hash verified using `hmac.compare_digest()` (prevents timing attacks)
 * **Corpus binding**: Ciphertext fails to decrypt if book order changes or text is modified
-* **Random salt & nonce**: Each encryption generates fresh salt and nonce (two identical plaintexts produce different ciphertexts)
+* **Random salt & nonce**: Each encryption generates fresh 16-byte salt and 12-byte nonce
+* **Token versioning**: Version field (`BC2`) supports future algorithm upgrades
 
 ## 🖼 Desktop App Interface
 
@@ -57,7 +60,7 @@ python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" enc
 python book_cipher.py --book book1.txt --book book2.txt --key "my_key" encrypt --message "Secret"
 
 # Decrypt a token
-python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" decrypt --cipher "BC1.xxx.yyy.zzz..."
+python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" decrypt --cipher "BC2.xxx.yyy.zzz..."
 
 # Interactive mode (prompts for input)
 python book_cipher.py --book books/alice.txt --key "secret" encrypt
