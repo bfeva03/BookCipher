@@ -66,9 +66,37 @@ python book_cipher.py --book books/pride_prejudice.txt --key "my_passphrase" dec
 python book_cipher.py --book books/alice.txt --key "secret" encrypt
 python book_cipher.py --book books/alice.txt --key "secret" decrypt
 
+# File I/O (encrypt file to file)
+python3 book_cipher.py --book books/alice.txt --key "secret" encrypt --input-file message.txt --output-file encrypted.token
+
+# High-security Scrypt (2^18, slower but stronger)
+python3 book_cipher.py --book books/alice.txt --key "secret" --scrypt-strength high encrypt --message "text"
+
+# Verbose logging for debugging
+python3 book_cipher.py --book books/alice.txt --key "secret" --verbose encrypt --message "text"
+
 # Disable Gutenberg auto-cleaning
-python book_cipher.py --book custom.txt --key "key" --no-autoclean encrypt --message "text"
+python3 book_cipher.py --book custom.txt --key "key" --no-autoclean encrypt --message "text"
 ```
+
+### CLI Options
+
+**Global options**:
+- `--book PATH` (required, repeatable): Path to .txt book(s)
+- `--key PASSPHRASE` (required): Encryption passphrase
+- `--no-autoclean`: Skip Project Gutenberg header removal
+- `--scrypt-strength [normal|high]`: Scrypt cost (default: normal = 2^17 ~100ms)
+- `--verbose`: Enable debug logging
+
+**Encrypt subcommand**:
+- `--message TEXT`: Message to encrypt (prompts if omitted)
+- `--input-file PATH`: Read plaintext from file instead
+- `--output-file PATH`: Save ciphertext to file
+
+**Decrypt subcommand**:
+- `--cipher TOKEN`: Token to decrypt (prompts if omitted)
+- `--input-file PATH`: Read token from file
+- `--output-file PATH`: Save plaintext to file
 
 ## 📚 Supported Book Files
 
@@ -98,12 +126,13 @@ python book_cipher.py --help
 
 ## 🏗 Module Structure
 
-* **`cipher_core.py`** — Core encryption/decryption, corpus building, Scrypt KDF, AES-256-GCM
-* **`book_cipher.py`** — Command-line interface with argparse
-* **`BookCipherApp.py`** — Tkinter desktop app with GUI, dark theme, key strength meter
+* **`cipher_core.py`** — Core encryption/decryption, corpus building, Scrypt KDF, AES-256-GCM, key strength analysis
+* **`book_cipher.py`** — Command-line interface with argparse, file I/O, logging
+* **`BookCipherApp.py`** — Tkinter desktop app with GUI, dark theme, key strength meter, threading
 * **`word_cipher.py`** — Legacy/experimental cipher variant (not actively used)
 * **`hybrid_cipher.py`** — Hybrid cipher variant (not actively used)
 * **`app_version.py`** — Version string for app distribution
+* **`tests/test_cipher_core.py`** — Comprehensive unit tests (20+ test cases)
 
 ## 🛠 Built With
 
@@ -116,6 +145,15 @@ python book_cipher.py --help
 ## ⚠️ Disclaimer
 
 This project is **for educational and experimental use only**. It is not recommended for securing high-value secrets or for professional cryptographic applications. The underlying cipher (AES-256-GCM) is sound, but this implementation has not undergone professional security audits.
+
+For detailed security analysis, see [THREAT_MODEL.md](THREAT_MODEL.md).
+
+## 📚 Additional Documentation
+
+- **[CHANGELOG.md](CHANGELOG.md)** — Version history and feature updates
+- **[THREAT_MODEL.md](THREAT_MODEL.md)** — Security properties, assumptions, attack scenarios
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** — Common issues and solutions
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Contributing guidelines and development setup
 
 ## 📄 License
 
