@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+bookciphyer.egg-info/PKG-INFO
+bookciphyer.egg-info/SOURCES.txt
+bookciphyer.egg-info/dependency_links.txt
+bookciphyer.egg-info/requires.txt
+bookciphyer.egg-info/top_level.txt
+tests/test_cipher_core.py
