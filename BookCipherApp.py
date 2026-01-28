@@ -8,6 +8,7 @@ if os.environ.get('DISPLAY','') == '':
     except Exception:
         pass
 import logging
+import random
 import threading
 from pathlib import Path
 from typing import Optional
@@ -282,8 +283,10 @@ class BookCipherApp(tk.Tk):
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
+            highlightthickness=1,
             relief="flat",
             wrap="word",
+            state="normal",
         )
         self.plain.pack(fill="both", expand=True, pady=(6, 10))
 
@@ -297,8 +300,10 @@ class BookCipherApp(tk.Tk):
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
+            highlightthickness=1,
             relief="flat",
             wrap="none",
+            state="normal",
         )
         self.cipher.pack(fill="both", expand=True, pady=(6, 12))
 
@@ -401,7 +406,6 @@ class BookCipherApp(tk.Tk):
 
     def randomize_books(self) -> None:
         """Randomize the order of books in the list."""
-        import random
         if len(self.book_paths) > 1:
             random.shuffle(self.book_paths)
             self._refresh_books_list()
