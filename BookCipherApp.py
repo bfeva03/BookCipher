@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
+import threading
 from pathlib import Path
+from typing import Optional
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 import cipher_core
+
+# Logging setup
+logger = logging.getLogger(__name__)
 
 # Use tkmacosx if present for nicer buttons on macOS (optional)
 try:
@@ -32,26 +38,11 @@ APP_TITLE = "BookCipher"
 
 def key_strength_score(s: str) -> tuple[int, str]:
     """
-    Simple, useful meter (not "security math", but good UX).
+    Use cipher_core's key strength analysis for consistency.
     Returns (0-100, label)
     """
-    s = s or ""
-    length = len(s)
-    if length == 0:
-        return 0, "Empty"
-
-    classes = 0
-    if any(c.islower() for c in s): classes += 1
-    if any(c.isupper() for c in s): classes += 1
-    if any(c.isdigit() for c in s): classes += 1
-    if any(not c.isalnum() for c in s): classes += 1
-
-    # Score
-    score = 0
-    score += min(length, 24) * 3            # up to 72
-    score += (classes - 1) * 10             # 0..30
-    score = max(0, min(100, score))
-
+    score, warnings_list = cipher_core.check_key_strength(s)
+    
     if score < 30:
         label = "Weak"
     elif score < 60:
@@ -84,6 +75,10 @@ class BookCipherApp(tk.Tk):
         self.status_var = tk.StringVar(value="Pick one or more .txt books to begin.")
         self.strength_var = tk.StringVar(value="Key strength: Empty")
         self.strength_value = tk.IntVar(value=0)
+        
+        # Threading
+        self._operation_thread: Optional[threading.Thread] = None
+        self._processing = tk.BooleanVar(value=False)
 
         # Build UI
         self._build_styles()
@@ -391,44 +386,122 @@ class BookCipherApp(tk.Tk):
         return k
 
     def do_encrypt(self) -> None:
+        """Encrypt plaintext in a background thread to keep UI responsive."""
+        if self._processing.get():
+            messagebox.showwarning("In Progress", "Another operation is in progress.")
+            return
+        
         try:
             key = self._require_key()
             books = self._load_books_texts()
-            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
-
             msg = self.plain.get("1.0", "end").rstrip("\n")
             if not msg.strip():
                 raise ValueError("Plaintext is empty.")
-
-            token = cipher_core.encrypt(msg, key, corpus)
-
-            self.cipher.delete("1.0", "end")
-            self.cipher.insert("1.0", token)
-
-            self.status_var.set("Encrypted.")
+            
+            self._processing.set(True)
+            self.encrypt_btn.config(state="disabled")
+            self.decrypt_btn.config(state="disabled")
+            self.status_var.set("Encrypting... (this may take ~100ms)")
+            
+            # Run in background thread
+            thread = threading.Thread(
+                target=self._encrypt_worker,
+                args=(key, books, msg),
+                daemon=True
+            )
+            self._operation_thread = thread
+            thread.start()
         except Exception as e:
+            self._processing.set(False)
             messagebox.showerror("Encrypt failed", str(e))
             self.status_var.set("Encrypt failed.")
+    
+    def _encrypt_worker(self, key: str, books: list[str], msg: str) -> None:
+        """Background worker for encryption."""
+        try:
+            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
+            token = cipher_core.encrypt(msg, key, corpus)
+            
+            # Update UI on main thread
+            self.after(0, self._encrypt_done, token)
+        except Exception as e:
+            self.after(0, self._encrypt_error, str(e))
+    
+    def _encrypt_done(self, token: str) -> None:
+        """Called when encryption completes (on main thread)."""
+        self.cipher.delete("1.0", "end")
+        self.cipher.insert("1.0", token)
+        self.status_var.set("Encrypted. (Copy ciphertext or decrypt later)")
+        self.encrypt_btn.config(state="normal")
+        self.decrypt_btn.config(state="normal")
+        self._processing.set(False)
+    
+    def _encrypt_error(self, error: str) -> None:
+        """Called if encryption fails (on main thread)."""
+        messagebox.showerror("Encrypt failed", error)
+        self.status_var.set("Encrypt failed.")
+        self.encrypt_btn.config(state="normal")
+        self.decrypt_btn.config(state="normal")
+        self._processing.set(False)
 
     def do_decrypt(self) -> None:
+        """Decrypt ciphertext in a background thread to keep UI responsive."""
+        if self._processing.get():
+            messagebox.showwarning("In Progress", "Another operation is in progress.")
+            return
+        
         try:
             key = self._require_key()
             books = self._load_books_texts()
-            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
-
             token = self.cipher.get("1.0", "end").strip()
             if not token:
                 raise ValueError("Ciphertext is empty.")
-
-            pt = cipher_core.decrypt(token, key, corpus)
-
-            self.plain.delete("1.0", "end")
-            self.plain.insert("1.0", pt)
-
-            self.status_var.set("Decrypted.")
+            
+            self._processing.set(True)
+            self.encrypt_btn.config(state="disabled")
+            self.decrypt_btn.config(state="disabled")
+            self.status_var.set("Decrypting... (this may take ~100ms)")
+            
+            # Run in background thread
+            thread = threading.Thread(
+                target=self._decrypt_worker,
+                args=(key, books, token),
+                daemon=True
+            )
+            self._operation_thread = thread
+            thread.start()
         except Exception as e:
+            self._processing.set(False)
             messagebox.showerror("Decrypt failed", str(e))
             self.status_var.set("Decrypt failed.")
+    
+    def _decrypt_worker(self, key: str, books: list[str], token: str) -> None:
+        """Background worker for decryption."""
+        try:
+            corpus = cipher_core.build_corpus(books, autoclean=self.autoclean_var.get())
+            pt = cipher_core.decrypt(token, key, corpus)
+            
+            # Update UI on main thread
+            self.after(0, self._decrypt_done, pt)
+        except Exception as e:
+            self.after(0, self._decrypt_error, str(e))
+    
+    def _decrypt_done(self, pt: str) -> None:
+        """Called when decryption completes (on main thread)."""
+        self.plain.delete("1.0", "end")
+        self.plain.insert("1.0", pt)
+        self.status_var.set("Decrypted successfully.")
+        self.encrypt_btn.config(state="normal")
+        self.decrypt_btn.config(state="normal")
+        self._processing.set(False)
+    
+    def _decrypt_error(self, error: str) -> None:
+        """Called if decryption fails (on main thread)."""
+        messagebox.showerror("Decrypt failed", error)
+        self.status_var.set("Decrypt failed.")
+        self.encrypt_btn.config(state="normal")
+        self.decrypt_btn.config(state="normal")
+        self._processing.set(False)
 
     def copy_cipher(self) -> None:
         token = self.cipher.get("1.0", "end").strip()
