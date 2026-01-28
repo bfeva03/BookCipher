@@ -403,8 +403,6 @@ class BookCipherApp(tk.Tk):
         for i, p in enumerate(self.book_paths, 1):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
-        # Force UI layout recalculation after modifying listbox
-        self.update_idletasks()
 
     def randomize_books(self) -> None:
         """Randomize the order of books in the list."""
