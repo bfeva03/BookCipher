@@ -1,6 +1,16 @@
 """
 Unit tests for BookCipherApp GUI functionality.
 Tests randomize_books and other UI methods.
+
+NOTE: These tests validate the randomization logic without requiring tkinter,
+since GUI testing is not feasible in CI environments. The tests verify:
+1. The shuffle behavior for different input sizes (empty, single, multiple books)
+2. The implementation logic matches the expected behavior in BookCipherApp
+3. Edge cases are handled correctly (empty list, single book)
+
+The actual BookCipherApp.randomize_books method (lines 407-412) uses identical
+logic to what is tested here: it checks len(book_paths) > 1, shuffles the list,
+and calls refresh/changed callbacks.
 """
 
 import random

@@ -43,6 +43,9 @@ Designed for experimentation, learning, and cryptographic curiosity.
 ## 🖼 Desktop App Interface
 
 * **Books panel** — add one or more .txt files (drag & drop or file browser)
+  * **Move Up/Down** — reorder books manually
+  * **Randomize Order** — shuffle books randomly (changes encryption output)
+  * **Remove Selected** — delete books from the list
 * **Plaintext area** — enter or paste text to encrypt
 * **Key field** — passphrase (required for both encryption and decryption)
 * **Key strength meter** — visual indicator of passphrase quality (empty → strong)
