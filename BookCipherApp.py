@@ -1,19 +1,12 @@
 from __future__ import annotations
-import os
-if os.environ.get('DISPLAY','') == '':
-    try:
-        from ctypes import cdll
-        appkit = cdll.LoadLibrary('/System/Library/Frameworks/AppKit.framework/AppKit')
-        appkit.NSApplicationActivateIgnoringOtherApps(1)
-    except Exception:
-        pass
+
 import logging
-import random
 import threading
 from pathlib import Path
 from typing import Optional
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+
 import cipher_core
 
 # Logging setup
@@ -25,15 +18,6 @@ try:
 except Exception:
     MacButton = None
 
-# macOS: Force Tkinter window to front
-import os
-if os.environ.get('DISPLAY','') == '':
-    try:
-        from ctypes import cdll
-        appkit = cdll.LoadLibrary('/System/Library/Frameworks/AppKit.framework/AppKit')
-        appkit.NSApplicationActivateIgnoringOtherApps(1)
-    except Exception:
-        pass
 
 # ----------------------------
 # Crimson theme palette
@@ -72,14 +56,6 @@ def key_strength_score(s: str) -> tuple[int, str]:
 
 
 class BookCipherApp(tk.Tk):
-    def _on_canvas_press(self, event):
-        pass
-
-    def _on_canvas_drag(self, event):
-        pass
-
-    def _on_canvas_release(self, event):
-        pass
     def __init__(self) -> None:
         super().__init__()
         self.title(APP_TITLE)
@@ -232,37 +208,34 @@ class BookCipherApp(tk.Tk):
         books_box = ttk.Frame(outer, style="Panel.TFrame")
         books_box.pack(fill="x", expand=False)
 
-        ttk.Label(books_box, text="Books (combined into one corpus) — Drag to reorder", style="TLabel").pack(anchor="w")
+        ttk.Label(
+            books_box,
+            text="Books (combined into one corpus) — Drag to reorder",
+            style="TLabel",
+        ).pack(anchor="w")
 
         # Create frame for listbox and controls
         books_frame = ttk.Frame(books_box, style="Panel.TFrame")
         books_frame.pack(fill="x", pady=(6, 0))
 
-        # Listbox for books
         self.books_list = tk.Listbox(
             books_frame,
-            selectmode="extended",
             bg=TEXT_BG,
             fg=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
-            relief="flat",
-            height=6,
-            selectbackground=ACCENT_2,
+            selectbackground=ACCENT,
             selectforeground=FG,
+            relief="flat",
+            height=4,
+            exportselection=False,
         )
-        self.books_list.pack(side="left", fill="both", expand=True)
+        self.books_list.pack(side="left", fill="x", expand=False)
 
         # Add vertical scrollbar
         scrollbar = ttk.Scrollbar(books_frame, orient="vertical", command=self.books_list.yview)
         scrollbar.pack(side="right", fill="y")
         self.books_list.config(yscrollcommand=scrollbar.set)
-
-        # Bind drag-drop events
-        self.books_list.bind("<Button-1>", self._on_listbox_press)
-        self.books_list.bind("<B1-Motion>", self._on_listbox_drag)
-        self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
-        self._drag_start_index = None
 
         # Reorder buttons
         btn_frame = ttk.Frame(books_box, style="Panel.TFrame")
@@ -270,8 +243,13 @@ class BookCipherApp(tk.Tk):
 
         self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
-        self._btn(btn_frame, "Randomize Order", self.randomize_books).pack(side="left", padx=(0, 5))
         self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
+
+        # Bind drag-drop events
+        self.books_list.bind("<Button-1>", self._on_listbox_press)
+        self.books_list.bind("<B1-Motion>", self._on_listbox_drag)
+        self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
+        self._drag_start_index = None
 
         # Plaintext
         ttk.Label(outer, text="Plaintext", style="TLabel").pack(anchor="w")
@@ -283,10 +261,8 @@ class BookCipherApp(tk.Tk):
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
-            highlightthickness=1,
             relief="flat",
             wrap="word",
-            state="normal",
         )
         self.plain.pack(fill="both", expand=True, pady=(6, 10))
 
@@ -300,10 +276,8 @@ class BookCipherApp(tk.Tk):
             insertbackground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
-            highlightthickness=1,
             relief="flat",
             wrap="none",
-            state="normal",
         )
         self.cipher.pack(fill="both", expand=True, pady=(6, 12))
 
@@ -404,12 +378,16 @@ class BookCipherApp(tk.Tk):
             # Display: "1. filename.txt"
             self.books_list.insert("end", f"{i}. {p.name}")
 
-    def randomize_books(self) -> None:
-        """Randomize the order of books in the list."""
-        if len(self.book_paths) > 1:
-            random.shuffle(self.book_paths)
-            self._refresh_books_list()
-            self._on_books_changed()
+    def _set_books_selection(self, index: int) -> None:
+        """Keep selection visible when moving items."""
+        if not self.book_paths:
+            return
+        index = max(0, min(index, len(self.book_paths) - 1))
+        self.books_list.selection_clear(0, "end")
+        self.books_list.selection_set(index)
+        self.books_list.activate(index)
+        self.books_list.see(index)
+        self.books_list.focus_set()
 
     def move_book_up(self) -> None:
         """Move selected book up in the list."""
@@ -420,7 +398,7 @@ class BookCipherApp(tk.Tk):
         # Swap with previous
         self.book_paths[idx], self.book_paths[idx - 1] = self.book_paths[idx - 1], self.book_paths[idx]
         self._refresh_books_list()
-        self.books_list.selection_set(idx - 1)
+        self._set_books_selection(idx - 1)
         self._on_books_changed()
 
     def move_book_down(self) -> None:
@@ -432,7 +410,7 @@ class BookCipherApp(tk.Tk):
         # Swap with next
         self.book_paths[idx], self.book_paths[idx + 1] = self.book_paths[idx + 1], self.book_paths[idx]
         self._refresh_books_list()
-        self.books_list.selection_set(idx + 1)
+        self._set_books_selection(idx + 1)
         self._on_books_changed()
 
     def _on_listbox_press(self, event: tk.Event) -> None:
@@ -460,10 +438,10 @@ class BookCipherApp(tk.Tk):
             # Moving up
             book = self.book_paths.pop(self._drag_start_index)
             self.book_paths.insert(drop_index, book)
-        
+
         # Update display with animation effect
         self._refresh_books_list()
-        self.books_list.selection_set(drop_index)
+        self._set_books_selection(drop_index)
         self._drag_start_index = drop_index
         self._on_books_changed()
 
@@ -486,6 +464,9 @@ class BookCipherApp(tk.Tk):
             self.key_entry.config(show="•")
             self.show_key_btn.config(text="Show")
 
+        # update button label ("Show" / "Hide")
+        # (find the sibling button by reading text isn't easy; simplest: set window focus and ignore)
+        # We'll just set status:
         self.status_var.set("Key visible." if self.show_key_var.get() else "Key hidden.")
 
     def _update_key_strength(self) -> None:
@@ -634,5 +615,6 @@ class BookCipherApp(tk.Tk):
 
 if __name__ == "__main__":
     app = BookCipherApp()
+    app.geometry("980x720")
     app.minsize(860, 620)
     app.mainloop()
