@@ -63,12 +63,12 @@ def check_key_strength(passphrase: str) -> tuple[int, list[str]]:
     """
     warnings_list = []
     score = 0
-    
+
     if not passphrase:
         return 0, ["Passphrase is empty"]
-    
+
     length = len(passphrase)
-    
+
     # Length score (0-40 points)
     if length < 8:
         warnings_list.append(f"Passphrase too short ({length}/12 chars recommended)")
@@ -78,16 +78,16 @@ def check_key_strength(passphrase: str) -> tuple[int, list[str]]:
         warnings_list.append(f"Increase to 12+ chars for better security")
     else:
         score += 40
-    
+
     # Character diversity (0-40 points)
     has_lower = any(c.islower() for c in passphrase)
     has_upper = any(c.isupper() for c in passphrase)
     has_digit = any(c.isdigit() for c in passphrase)
     has_special = any(not c.isalnum() for c in passphrase)
-    
+
     char_classes = sum([has_lower, has_upper, has_digit, has_special])
     score += char_classes * 10
-    
+
     if not has_lower:
         warnings_list.append("Add lowercase letters")
     if not has_upper:
@@ -96,13 +96,13 @@ def check_key_strength(passphrase: str) -> tuple[int, list[str]]:
         warnings_list.append("Add numbers")
     if not has_special:
         warnings_list.append("Add special characters (!@#$%)")
-    
+
     # No common patterns (0-20 points)
-    if passphrase.lower() not in ['password', 'qwerty', '123456', 'abc123', 'letmein']:
+    if passphrase.lower() not in ["password", "qwerty", "123456", "abc123", "letmein"]:
         score += 20
     else:
         warnings_list.append("This is a very common passphrase")
-    
+
     return min(100, score), warnings_list
 
 
@@ -149,12 +149,12 @@ def _derive_key(passphrase: str, salt: bytes, scrypt_n: int = SCRYPT_DEFAULT_N) 
     """
     if len(salt) != 16:
         raise ValueError("Salt must be exactly 16 bytes.")
-    
+
     # Validate scrypt_n
     valid_n_values = [2**15, 2**16, 2**17, 2**18]
     if scrypt_n not in valid_n_values:
         raise ValueError(f"scrypt_n must be one of {valid_n_values}")
-    
+
     logger.debug(f"Deriving key with Scrypt n={scrypt_n}")
 
     # Scrypt: memory-hard KDF (higher n = more compute & memory cost)
@@ -295,9 +295,7 @@ def decrypt(token: str, key: str, corpus: Corpus) -> str:
     try:
         pt = aesgcm.decrypt(nonce, ct, corpus.sha256)
     except Exception:
-        raise ValueError(
-            "Wrong key or ciphertext was modified (authentication failed)."
-        )
+        raise ValueError("Wrong key or ciphertext was modified (authentication failed).")
 
     logger.debug(f"Decrypted message, plaintext size: {len(pt)} bytes")
     return pt.decode("utf-8", errors="replace")

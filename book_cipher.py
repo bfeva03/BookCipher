@@ -8,10 +8,7 @@ from pathlib import Path
 import cipher_core
 
 # Logging setup
-logging.basicConfig(
-    level=logging.WARNING,
-    format="%(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -35,9 +32,7 @@ def save_text(path: Path, text: str) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="BookCipher CLI (authenticated, book-bound encryption)"
-    )
+    ap = argparse.ArgumentParser(description="BookCipher CLI (authenticated, book-bound encryption)")
 
     ap.add_argument(
         "--book",
@@ -98,7 +93,7 @@ def main() -> None:
     )
 
     args = ap.parse_args()
-    
+
     # Configure logging
     if args.verbose:
         logging.getLogger("cipher_core").setLevel(logging.DEBUG)
@@ -106,9 +101,7 @@ def main() -> None:
 
     # Load books
     books = [load_text(Path(p)) for p in args.book]
-    corpus = cipher_core.build_corpus(
-        books, autoclean=not args.no_autoclean
-    )
+    corpus = cipher_core.build_corpus(books, autoclean=not args.no_autoclean)
 
     # Determine Scrypt strength
     scrypt_n = cipher_core.SCRYPT_HIGH_N if args.scrypt_strength == "high" else cipher_core.SCRYPT_DEFAULT_N
@@ -121,16 +114,16 @@ def main() -> None:
             plaintext = args.message
         else:
             plaintext = input("Message to encrypt: ")
-        
+
         # Encrypt
         token = cipher_core.encrypt(plaintext, args.key, corpus, scrypt_n)
-        
+
         # Output
         if args.output_file:
             save_text(Path(args.output_file), token)
         else:
             print(token)
-    
+
     else:  # decrypt
         # Get ciphertext
         if args.input_file:
@@ -139,10 +132,10 @@ def main() -> None:
             token = args.cipher
         else:
             token = input("Paste ciphertext token: ").strip()
-        
+
         # Decrypt
         plaintext = cipher_core.decrypt(token, args.key, corpus)
-        
+
         # Output
         if args.output_file:
             save_text(Path(args.output_file), plaintext)
@@ -159,4 +152,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nAborted.", file=sys.stderr)
         sys.exit(130)
-
