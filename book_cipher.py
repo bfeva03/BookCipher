@@ -52,9 +52,14 @@ def main() -> None:
     )
     ap.add_argument(
         "--scrypt-strength",
-        choices=["normal", "high"],
-        default="normal",
-        help="Scrypt strength: 'normal' (2^17, ~100ms) or 'high' (2^18, ~200ms)",
+        choices=["low", "medium", "high", "normal"],
+        default="medium",
+        help="Scrypt strength: low (2^16), medium (2^17), or high (2^18)",
+    )
+    ap.add_argument(
+        "--allow-weak-kdf",
+        action="store_true",
+        help="Allow weak Scrypt parameters (unsafe; not recommended)",
     )
     ap.add_argument(
         "--verbose",
@@ -76,6 +81,24 @@ def main() -> None:
     enc.add_argument(
         "--output-file",
         help="Save ciphertext token to file",
+    )
+    enc.add_argument(
+        "--padding",
+        choices=["off", "block", "pow2"],
+        default="off",
+        help="Optional length-hiding padding mode",
+    )
+    enc.add_argument(
+        "--padding-block-size",
+        type=int,
+        default=cipher_core.PADDING_BLOCK_DEFAULT,
+        help="Block size for padding=block (default: 4096)",
+    )
+    enc.add_argument(
+        "--message-id",
+        nargs="?",
+        const="auto",
+        help="Attach a UUIDv4 message_id (use without value to auto-generate)",
     )
 
     dec = sub.add_parser("decrypt")
@@ -104,7 +127,7 @@ def main() -> None:
     corpus = cipher_core.build_corpus(books, autoclean=not args.no_autoclean)
 
     # Determine Scrypt strength
-    scrypt_n = cipher_core.SCRYPT_HIGH_N if args.scrypt_strength == "high" else cipher_core.SCRYPT_DEFAULT_N
+    scrypt_strength = "medium" if args.scrypt_strength == "normal" else args.scrypt_strength
 
     if args.mode == "encrypt":
         # Get plaintext
@@ -116,7 +139,16 @@ def main() -> None:
             plaintext = input("Message to encrypt: ")
 
         # Encrypt
-        token = cipher_core.encrypt(plaintext, args.key, corpus, scrypt_n)
+        token = cipher_core.encrypt(
+            plaintext,
+            args.key,
+            corpus,
+            scrypt_strength=scrypt_strength,
+            allow_weak_kdf=args.allow_weak_kdf,
+            padding=args.padding,
+            padding_block_size=args.padding_block_size,
+            message_id=args.message_id,
+        )
 
         # Output
         if args.output_file:
@@ -134,7 +166,13 @@ def main() -> None:
             token = input("Paste ciphertext token: ").strip()
 
         # Decrypt
-        plaintext = cipher_core.decrypt(token, args.key, corpus)
+        plaintext = cipher_core.decrypt(
+            token,
+            args.key,
+            corpus,
+            scrypt_strength=scrypt_strength,
+            allow_weak_kdf=args.allow_weak_kdf,
+        )
 
         # Output
         if args.output_file:

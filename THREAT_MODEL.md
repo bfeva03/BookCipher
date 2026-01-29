@@ -5,7 +5,7 @@
 ### Confidentiality (Encryption)
 - **Eavesdropping**: Ciphertext is unreadable without the correct key and books
 - **AES-256-GCM**: Industry-standard authenticated encryption (same as used by governments, banks)
-- **Key derivation**: Scrypt + HKDF makes brute-force attacks computationally expensive (~100-200ms per attempt)
+- **Key derivation**: Scrypt + HKDF makes brute-force attacks computationally expensive
 
 ### Integrity & Authenticity
 - **Authentication tags**: AES-GCM detects if ciphertext was tampered with
@@ -37,8 +37,8 @@
 - **RNG compromise**: If `os.urandom()` is weak or unseeded (extremely unlikely on modern OS)
 
 ### Operational Risks
-- **Ciphertext metadata**: Token itself doesn't hide message length or encryption time
-- **Replay attacks**: Same ciphertext can be replayed by attacker (doesn't modify plaintext, but reveals it was reused)
+- **Ciphertext metadata**: Token itself doesn't hide message length or encryption time (unless padding is enabled)
+- **Replay attacks**: Same ciphertext can be replayed by attacker (message_id allows external replay tracking)
 - **Traffic analysis**: When you encrypt/decrypt can reveal patterns
 
 ## Security Assumptions
@@ -71,7 +71,7 @@
 - ✅ Corpus binding: Corpus hash embedded in token must match (prevents guessing)
 - ✅ AES-GCM auth tag: Decryption fails if wrong corpus is used
 
-**Mitigation**: Keep books secret or off-cloud. If books are public (e.g., Alice in Wonderland), corpus is predictable.
+**Mitigation**: If books are public (e.g., Alice in Wonderland), corpus is predictable. Security then relies entirely on passphrase + KDF.
 
 ### Scenario 3: Attacker Has Both Ciphertext and Books
 **Goal**: Decrypt without key
@@ -113,11 +113,12 @@
    - Avoid: dictionary words, personal info, common patterns
 
 2. **Protect your books**
-   - If books are public (e.g., Alice in Wonderland), corpus is predictable
-   - Consider using obscure or private documents as books
-   - Keep book list secret (combination of books = additional security)
+   - Public books are **not** secret; assume attacker knows them
+   - If you use public books, your passphrase/KDF is the only secret
+   - If you use private text, treat it as sensitive too
 
 3. **Secure token storage**
+   - Tokens are sensitive artifacts; treat them like secrets
    - Save tokens to encrypted drives or password-protected containers
    - Don't store in plain text files on unencrypted systems
    - Back up tokens securely if decryption is important
@@ -129,6 +130,20 @@
    - Clear clipboard after copying tokens
    - Wipe temporary files securely (swaps, temp folders)
 
+### DO / DON’T (Quick Reference)
+
+**DO**
+- Use long passphrases (20+ chars) and strong KDF presets
+- Enable padding if message length is sensitive
+- Treat tokens as secrets; store on encrypted media
+- Clear clipboard after copying tokens
+
+**DON’T**
+- Don’t assume public books are secret
+- Don’t paste tokens or passphrases into shared chats or logs
+- Don’t leave tokens in shell history on shared machines
+- Don’t reuse the same passphrase across unrelated messages
+
 5. **Testing & Validation**
    - Always test decryption immediately after encryption
    - Keep test vectors for regression testing
@@ -138,6 +153,7 @@
    - BC1 tokens are still supported but use weaker Scrypt (n=2^15)
    - Consider re-encrypting with BC2 for stronger security
    - Keep old versions if decrypting legacy tokens
+   - BC2 tokens remain legacy-compatible; BC3 adds authenticated metadata (padding/message_id)
 
 ## Security Audit & Limitations
 
@@ -157,4 +173,3 @@ If you find a security vulnerability, please report it responsibly:
 2. Email maintainers with details
 3. Allow time for a fix before public disclosure
 4. Do NOT use exploits maliciously
-
