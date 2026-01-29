@@ -166,6 +166,41 @@
 
 For production systems or high-security needs, use professionally audited cryptography tools (GPG, Signal, etc.).
 
+## Security Review Notes & Improvement Ideas
+
+The current design uses AES-256-GCM with random nonces and a memory-hard KDF, which is a solid foundation. The following improvements can further reduce risk and improve resilience against real-world threats. The list is organized by **impact** and **effort**.
+
+### High impact / low effort
+1. **Store KDF parameters in the token**
+   - **Why**: Decryption currently depends on external configuration (defaults or CLI arguments). If parameters change over time, tokens can become undecryptable or users may select weaker settings by mistake.
+   - **Improvement**: Embed `scrypt_n`, `r`, and `p` in the token metadata so decryption is self-describing and verifiable.
+
+2. **Make BC3 padding easy to enable**
+   - **Why**: Ciphertext length leaks plaintext size and usage patterns.
+   - **Improvement**: Add a prominent UI toggle that explains padding tradeoffs, or default to padding for new tokens while keeping an opt-out.
+
+3. **Document replay detection patterns**
+   - **Why**: Replays are listed as an operational risk. BC3 supports message IDs, but decryption doesn’t prevent replays on its own.
+   - **Improvement**: Provide a short example for apps to store and reject recently seen message IDs (e.g., 24-hour cache).
+
+4. **Warn when corpora are public**
+   - **Why**: Public books remove the corpus as a secret, leaving only the passphrase as protection.
+   - **Improvement**: Show a UI warning when the corpus is commonly known or when using well-known public domain texts.
+
+### Medium impact / medium effort
+5. **Self-describing tokens for versioning**
+   - **Why**: Users might lose the ability to decrypt older tokens if defaults evolve.
+   - **Improvement**: Include a compact metadata block with KDF params and padding mode for all non-legacy tokens, then validate on decrypt.
+
+6. **Secret-handling hygiene**
+   - **Why**: Secrets can leak via clipboard, shell history, or crash logs.
+   - **Improvement**: Recommend avoiding clipboard use on shared machines, clearing fields after use, and disabling verbose logs in production.
+
+### Low frequency but high severity
+7. **Supply-chain hardening**
+   - **Why**: Library integrity is a core assumption. A compromised dependency undermines the encryption stack.
+   - **Improvement**: Pin cryptography dependency versions, verify release checksums, and (if possible) sign or reproduce builds.
+
 ## Responsible Disclosure
 
 If you find a security vulnerability, please report it responsibly:
