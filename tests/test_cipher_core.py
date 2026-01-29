@@ -5,6 +5,7 @@ Tests encryption, decryption, key strength, and BC1/BC2 compatibility.
 """
 
 import importlib.util
+import uuid
 
 import pytest
 
@@ -92,6 +93,38 @@ class TestEncryptionDecryption:
         # Decrypt
         recovered = cipher_core.decrypt(token, key, corpus)
         assert recovered == plaintext
+
+    def test_legacy_bc2_aad_compatibility(self):
+        text = "Test corpus"
+        corpus = cipher_core.build_corpus([text], autoclean=False)
+        key = "TestKey123!"
+        plaintext = "Legacy AAD"
+
+        salt = b"\x00" * 16
+        nonce = b"\x01" * 12
+        k = cipher_core._derive_key(
+            key,
+            salt,
+            scrypt_params=cipher_core.ScryptParams(
+                n=cipher_core.SCRYPT_DEFAULT_N,
+                r=cipher_core.SCRYPT_R,
+                p=cipher_core.SCRYPT_P,
+            ),
+            allow_weak_kdf=False,
+        )
+        aesgcm = cipher_core.AESGCM(k)
+        ct = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), corpus.sha256)
+
+        token = ".".join(
+            [
+                cipher_core.MAGIC,
+                cipher_core._b64u_encode(salt),
+                cipher_core._b64u_encode(nonce),
+                cipher_core._b64u_encode(corpus.sha256),
+                cipher_core._b64u_encode(ct),
+            ]
+        )
+        assert cipher_core.decrypt(token, key, corpus) == plaintext
 
     def test_wrong_key_fails(self):
         text = "Test corpus"
@@ -204,7 +237,7 @@ class TestTokenFormat:
 
     def test_invalid_token_format_few_parts(self):
         corpus = cipher_core.build_corpus(["Test"], autoclean=False)
-        with pytest.raises(ValueError, match="5 parts"):
+        with pytest.raises(ValueError, match="5 or 6 parts"):
             cipher_core.decrypt("BC2.xxx.yyy", "key", corpus)
 
     def test_invalid_token_format_bad_encoding(self):
@@ -213,6 +246,108 @@ class TestTokenFormat:
         # The base64 decoder will succeed for these patterns (! is actually not valid)
         with pytest.raises(ValueError):  # Will fail for some reason
             cipher_core.decrypt("BC2.abc.def.ghi.jkl", "key", corpus)
+
+    def test_tampered_corpus_hash_fails(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt("Secret", "key", corpus)
+        parts = token.split(".")
+        ch = cipher_core._b64u_decode(parts[3])
+        tampered_ch = bytes([ch[0] ^ 0x01]) + ch[1:]
+        parts[3] = cipher_core._b64u_encode(tampered_ch)
+        tampered = ".".join(parts)
+        with pytest.raises(ValueError, match="corpus mismatch"):
+            cipher_core.decrypt(tampered, "key", corpus)
+
+
+class TestPaddingAndMetadata:
+    """Test padding and metadata handling."""
+
+    def test_padding_block_roundtrip(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt(
+            "Hello",
+            "key",
+            corpus,
+            padding="block",
+            padding_block_size=32,
+        )
+        parts = token.split(".")
+        assert parts[0] == "BC3"
+        assert len(parts) == 6
+        assert cipher_core.decrypt(token, "key", corpus) == "Hello"
+
+    def test_padding_pow2_roundtrip(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt(
+            "Hello world",
+            "key",
+            corpus,
+            padding="pow2",
+        )
+        parts = token.split(".")
+        assert parts[0] == "BC3"
+        assert len(parts) == 6
+        assert cipher_core.decrypt(token, "key", corpus) == "Hello world"
+
+    def test_tampered_metadata_fails(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt(
+            "Secret",
+            "key",
+            corpus,
+            padding="block",
+            padding_block_size=32,
+        )
+        parts = token.split(".")
+        meta = cipher_core._b64u_decode(parts[4])
+        tampered_meta = bytes([meta[0] ^ 0x01]) + meta[1:]
+        parts[4] = cipher_core._b64u_encode(tampered_meta)
+        tampered = ".".join(parts)
+        with pytest.raises(ValueError):
+            cipher_core.decrypt(tampered, "key", corpus)
+
+    def test_invalid_message_id_version_rejected(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt(
+            "Secret",
+            "key",
+            corpus,
+            message_id="auto",
+        )
+        parts = token.split(".")
+        meta = bytearray(cipher_core._b64u_decode(parts[4]))
+        # Set UUID version nibble to 1 (not v4). UUID is last 16 bytes in meta.
+        uuid_offset = len(meta) - 16
+        meta[uuid_offset + 6] = (meta[uuid_offset + 6] & 0x0F) | 0x10
+        parts[4] = cipher_core._b64u_encode(bytes(meta))
+        tampered = ".".join(parts)
+        with pytest.raises(ValueError):
+            cipher_core.decrypt(tampered, "key", corpus)
+
+    def test_message_id_presence_and_aad(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        msg_id = str(uuid.uuid4())
+        token = cipher_core.encrypt(
+            "Secret",
+            "key",
+            corpus,
+            message_id=msg_id,
+        )
+        meta = cipher_core.get_token_metadata(token)
+        assert meta["message_id"] == msg_id
+        # Tamper metadata; AAD should fail
+        parts = token.split(".")
+        parts[4] = "B" + parts[4][1:]
+        tampered = ".".join(parts)
+        with pytest.raises(ValueError):
+            cipher_core.decrypt(tampered, "key", corpus)
+
+    def test_decrypt_with_metadata_bc2_empty(self):
+        corpus = cipher_core.build_corpus(["Test"], autoclean=False)
+        token = cipher_core.encrypt("Hello", "key", corpus)
+        pt, meta = cipher_core.decrypt_with_metadata(token, "key", corpus)
+        assert pt == "Hello"
+        assert meta == {}
 
 
 if __name__ == "__main__":
