@@ -312,13 +312,32 @@ class BookCipherApp(tk.Tk):
 
     def randomize_books(self) -> None:
         """Randomize the order of the selected books."""
-        import random
-
-        if not self.book_paths:
+        if len(self.book_paths) < 2:
             return
-        random.shuffle(self.book_paths)
+        self.book_paths = self._shuffled_books(self.book_paths)
         self._refresh_books_list()
         self._on_books_changed()
+
+    def _shuffled_books(self, items: list[Path]) -> list[Path]:
+        """Return a new list with items shuffled (Fisher-Yates)."""
+        import random
+
+        shuffled = list(items)
+        for i in range(len(shuffled) - 1, 0, -1):
+            j = random.randint(0, i)
+            if i != j:
+                shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+        if shuffled == items and len(items) > 1:
+            # Retry a few times to avoid no-op shuffle.
+            for _ in range(3):
+                shuffled = list(items)
+                for i in range(len(shuffled) - 1, 0, -1):
+                    j = random.randint(0, i)
+                    if i != j:
+                        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+                if shuffled != items:
+                    break
+        return shuffled
 
     def _btn(self, parent, text: str, cmd, mini: bool = False):
         # Prefer tkmacosx Button if available (fixes “white ttk button” look)
