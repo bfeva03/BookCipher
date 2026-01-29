@@ -2,6 +2,8 @@
 
 BookCipher is a macOS desktop app and Python CLI that implements **authenticated, book-bound encryption** using public-domain texts. It encrypts plaintext into compact, verifiable ciphertext that is cryptographically bound to a specific set of books and can only be decrypted with the correct key and book corpus.
 
+**Important**: Public books are **not** secret. Security relies entirely on your passphrase and KDF settings. Treat tokens as sensitive artifacts.
+
 Designed for experimentation, learning, and cryptographic curiosity.
 
 ## ✨ Features
@@ -12,6 +14,8 @@ Designed for experimentation, learning, and cryptographic curiosity.
 * 🧹 **Auto-cleaning of Project Gutenberg headers** — removes boilerplate automatically
 * 🧾 **Compact tokens** — base64url-encoded, no spaces or quotes needed
 * **Corpus binding** — ciphertext is cryptographically bound to book order and content (SHA-256 hash)
+* 🧩 **Optional length-hiding padding** — block or power-of-two padding
+* 🧷 **Optional message_id hook** — UUIDv4 included in authenticated metadata
 * 🖥 **Dual interface** — Native macOS Tkinter app or command-line CLI
 * 🎨 **Dark theme UI** — crimson and charcoal color scheme
 
@@ -22,10 +26,12 @@ Designed for experimentation, learning, and cryptographic curiosity.
 2. **Hash corpus**: Compute SHA-256 of combined text (corpus binding)
 3. **Derive key**: Use Scrypt(passphrase, salt, n=2^17) + HKDF for 32-byte encryption key
 4. **Encrypt**: AES-256-GCM encrypts plaintext with corpus hash as Additional Authenticated Data (AAD)
-5. **Pack token**: `BC2.<salt>.<nonce>.<corpus_hash>.<ciphertext>` (all base64url-encoded)
+5. **Pack token**:
+   - **BC2** (default): `BC2.<salt>.<nonce>.<corpus_hash>.<ciphertext>`
+   - **BC3** (with padding/message_id): `BC3.<salt>.<nonce>.<corpus_hash>.<metadata>.<ciphertext>`
 
 ### Decryption Pipeline
-1. **Parse token**: Extract salt, nonce, embedded corpus hash, and ciphertext
+1. **Parse token**: Extract salt, nonce, embedded corpus hash, metadata (if present), and ciphertext
 2. **Verify corpus**: Compare embedded hash against current book corpus (fails if wrong books/order)
 3. **Derive key**: Scrypt(passphrase, salt) regenerates the encryption key
 4. **Decrypt & verify**: AES-256-GCM decrypts; authentication fails if key is wrong or ciphertext modified
@@ -33,12 +39,12 @@ Designed for experimentation, learning, and cryptographic curiosity.
 
 ### Security Properties
 * **Authentication**: AES-256-GCM provides built-in authentication (tampering immediately detected)
-* **Key derivation**: Scrypt with n=2^17, r=8, p=1 resists brute-force attacks (4x stronger than v1)
+* **Key derivation**: Scrypt presets (low/medium/high) control brute-force cost
 * **HKDF expansion**: Additional security layer for proper key stretching
 * **Constant-time comparison**: Corpus hash verified using `hmac.compare_digest()` (prevents timing attacks)
 * **Corpus binding**: Ciphertext fails to decrypt if book order changes or text is modified
 * **Random salt & nonce**: Each encryption generates fresh 16-byte salt and 12-byte nonce
-* **Token versioning**: Version field (`BC2`) supports future algorithm upgrades
+* **Token versioning**: Version field (`BC2`/`BC3`) supports future algorithm upgrades (BC2 remains legacy-compatible)
 
 ## 🖼 Desktop App Interface
 
@@ -75,6 +81,9 @@ python3 book_cipher.py --book books/alice.txt --key "secret" encrypt --input-fil
 # High-security Scrypt (2^18, slower but stronger)
 python3 book_cipher.py --book books/alice.txt --key "secret" --scrypt-strength high encrypt --message "text"
 
+# Optional padding + message_id
+python3 book_cipher.py --book books/alice.txt --key "secret" encrypt --message "text" --padding pow2 --message-id
+
 # Verbose logging for debugging
 python3 book_cipher.py --book books/alice.txt --key "secret" --verbose encrypt --message "text"
 
@@ -88,18 +97,45 @@ python3 book_cipher.py --book custom.txt --key "key" --no-autoclean encrypt --me
 - `--book PATH` (required, repeatable): Path to .txt book(s)
 - `--key PASSPHRASE` (required): Encryption passphrase
 - `--no-autoclean`: Skip Project Gutenberg header removal
-- `--scrypt-strength [normal|high]`: Scrypt cost (default: normal = 2^17 ~100ms)
+- `--scrypt-strength [low|medium|high]`: Scrypt cost preset (default: medium)
+- `--allow-weak-kdf`: Allow weak Scrypt parameters (unsafe)
 - `--verbose`: Enable debug logging
 
 **Encrypt subcommand**:
 - `--message TEXT`: Message to encrypt (prompts if omitted)
 - `--input-file PATH`: Read plaintext from file instead
 - `--output-file PATH`: Save ciphertext to file
+- `--padding [off|block|pow2]`: Optional length-hiding padding
+- `--padding-block-size N`: Block size for padding=block (default: 4096)
+- `--message-id [UUID|auto]`: Attach UUIDv4 message_id (use without value to auto-generate)
 
 **Decrypt subcommand**:
 - `--cipher TOKEN`: Token to decrypt (prompts if omitted)
 - `--input-file PATH`: Read token from file
 - `--output-file PATH`: Save plaintext to file
+
+### Scrypt Presets
+
+| Preset | N | r | p | Relative cost |
+|--------|---|---|---|----------------|
+| low | 2^16 | 8 | 1 | fast |
+| medium (default) | 2^17 | 8 | 1 | balanced |
+| high | 2^18 | 8 | 1 | stronger/slower |
+
+## ✅ Best Practices (Do / Don’t)
+
+**DO**
+- Use a long passphrase (20+ chars), ideally a password manager or diceware
+- Treat tokens as sensitive artifacts (store on encrypted disk, avoid sharing)
+- Clear your clipboard after copying tokens
+- Use `--padding` if message length is sensitive
+- Prefer `--scrypt-strength high` for long-term storage
+
+**DON’T**
+- Don’t assume public books are secret; they are not
+- Don’t paste tokens or passphrases into shared chats or issue trackers
+- Don’t leave tokens in shell history or command logs on shared machines
+- Don’t reuse the same passphrase across unrelated messages
 
 ## 📚 Supported Book Files
 
@@ -170,5 +206,3 @@ BookCipher was built as an exploration of:
 * Deterministic randomness and corpus binding
 * macOS app packaging and distribution
 * Clean UI design for cryptographic tools
-
-

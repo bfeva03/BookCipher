@@ -9,6 +9,7 @@ All notable changes to BookCipher are documented in this file.
 - **HKDF key expansion**: Added HKDF-SHA256 layer for proper key stretching
 - **Constant-time comparison**: Corpus hash verified using `hmac.compare_digest()` to prevent timing attacks
 - **Token versioning**: Updated to BC2 format with version field for future compatibility
+- **BC2 compatibility**: Preserve legacy BC2 AAD; BC3 uses domain-separated AAD
 - **Input validation**: Added size checks for salt (16B) and nonce (12B)
 
 ### New Features 🎉
