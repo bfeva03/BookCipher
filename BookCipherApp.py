@@ -1,5 +1,14 @@
 from __future__ import annotations
+import os
 
+if os.environ.get("DISPLAY", "") == "":
+    try:
+        from ctypes import cdll
+
+        appkit = cdll.LoadLibrary("/System/Library/Frameworks/AppKit.framework/AppKit")
+        appkit.NSApplicationActivateIgnoringOtherApps(1)
+    except Exception:
+        pass
 import logging
 import threading
 import sys
@@ -7,7 +16,6 @@ from pathlib import Path
 from typing import Optional
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-
 import cipher_core
 
 # Logging setup
@@ -19,35 +27,31 @@ try:
 except Exception:
     MacButton = None
 
+# macOS: Force Tkinter window to front
+import os
+
+if os.environ.get("DISPLAY", "") == "":
+    try:
+        from ctypes import cdll
+
+        appkit = cdll.LoadLibrary("/System/Library/Frameworks/AppKit.framework/AppKit")
+        appkit.NSApplicationActivateIgnoringOtherApps(1)
+    except Exception:
+        pass
 
 # ----------------------------
-# Modern twilight theme palette
+# Crimson theme palette
 # ----------------------------
-BG = "#0B0F14"
-PANEL = "#0F141A"
-PANEL_2 = "#151B23"
-ACCENT = "#4F46E5"
-ACCENT_2 = "#6366F1"
-FG = "#E2E8F0"
-MUTED = "#94A3B8"
-BORDER = "#253043"
-ENTRY_BG = "#101722"
-TEXT_BG = "#0B1118"
-
-
-def _default_font_family() -> str:
-    if sys.platform == "darwin":
-        return "SF Pro Text"
-    if sys.platform.startswith("win"):
-        return "Segoe UI"
-    return "Helvetica"
-
-
-FONT_FAMILY = _default_font_family()
-FONT_BASE = (FONT_FAMILY, 11)
-FONT_SMALL = (FONT_FAMILY, 10)
-FONT_SECTION = (FONT_FAMILY, 11, "bold")
-FONT_TITLE = (FONT_FAMILY, 20, "bold")
+BG = "#12060A"
+PANEL = "#1C0A10"
+PANEL_2 = "#220B13"
+ACCENT = "#A1122A"
+ACCENT_2 = "#D7263D"
+FG = "#F3E9EC"
+MUTED = "#BCA7AE"
+BORDER = "#4A1A24"
+ENTRY_BG = "#2A0F18"  # Lighter for better visibility
+TEXT_BG = "#1A0C12"  # Lighter than BG for text widgets
 
 APP_TITLE = "BookCipher"
 
@@ -72,11 +76,19 @@ def key_strength_score(s: str) -> tuple[int, str]:
 
 
 class BookCipherApp(tk.Tk):
+    def _on_canvas_press(self, event):
+        pass
+
+    def _on_canvas_drag(self, event):
+        pass
+
+    def _on_canvas_release(self, event):
+        pass
+
     def __init__(self) -> None:
         super().__init__()
         self.title(APP_TITLE)
         self.configure(bg=BG)
-        self.option_add("*Font", f"{FONT_FAMILY} 11")
 
         # optional logo in header area (doesn't affect macOS .icns app icon)
         self._logo_img = None
@@ -115,20 +127,14 @@ class BookCipherApp(tk.Tk):
 
         style.configure("TFrame", background=BG)
         style.configure("Panel.TFrame", background=PANEL)
-        style.configure("Header.TFrame", background=PANEL)
-        style.configure("Card.TFrame", background=PANEL_2)
-        style.configure("TLabel", background=BG, foreground=FG, font=FONT_BASE)
-        style.configure("Header.Title.TLabel", background=PANEL, foreground=FG, font=FONT_TITLE)
-        style.configure("Header.Sub.TLabel", background=PANEL, foreground=MUTED, font=FONT_SMALL)
-        style.configure("Card.TLabel", background=PANEL_2, foreground=FG, font=FONT_BASE)
-        style.configure("Card.Sub.TLabel", background=PANEL_2, foreground=MUTED, font=FONT_SMALL)
-        style.configure("Card.Section.TLabel", background=PANEL_2, foreground=FG, font=FONT_SECTION)
+        style.configure("TLabel", background=PANEL, foreground=FG)
+        style.configure("Title.TLabel", background=PANEL, foreground=FG, font=("Helvetica", 18, "bold"))
+        style.configure("Sub.TLabel", background=PANEL, foreground=MUTED)
 
         style.configure(
-            "Card.TCheckbutton",
-            background=PANEL_2,
+            "TCheckbutton",
+            background=PANEL,
             foreground=FG,
-            font=FONT_SMALL,
         )
 
         style.configure(
@@ -139,8 +145,6 @@ class BookCipherApp(tk.Tk):
             lightcolor=ACCENT,
             darkcolor=ACCENT,
         )
-
-        style.configure("TSeparator", background=BORDER)
 
     def _try_load_logo(self) -> None:
         # Put logo.png in the same folder as BookCipherApp.py (or project root)
@@ -157,58 +161,31 @@ class BookCipherApp(tk.Tk):
                     self._logo_img = None
                     return
 
-    def _card(
-        self,
-        parent,
-        *,
-        padx: int = 14,
-        pady: int = 12,
-        fill: str = "x",
-        expand: bool = False,
-        pady_outer: tuple[int, int] = (0, 12),
-    ) -> tk.Frame:
-        container = tk.Frame(
-            parent,
-            bg=PANEL_2,
-            highlightbackground=BORDER,
-            highlightthickness=1,
-        )
-        container.pack(fill=fill, expand=expand, pady=pady_outer)
-        inner = tk.Frame(container, bg=PANEL_2)
-        inner.pack(fill="both", expand=True, padx=padx, pady=pady)
-        return inner
-
     def _build_ui(self) -> None:
-        outer = ttk.Frame(self, style="TFrame", padding=16)
+        outer = ttk.Frame(self, style="Panel.TFrame", padding=14)
         outer.pack(fill="both", expand=True)
 
         # Header
-        header = ttk.Frame(outer, style="Header.TFrame")
+        header = ttk.Frame(outer, style="Panel.TFrame")
         header.pack(fill="x")
 
         if self._logo_img:
             logo_lbl = tk.Label(header, image=self._logo_img, bg=PANEL)
-            logo_lbl.pack(side="left", padx=(0, 12))
+            logo_lbl.pack(side="left", padx=(0, 10))
 
-        header_text = ttk.Frame(header, style="Header.TFrame")
-        header_text.pack(side="left", fill="x", expand=True)
-
-        title = ttk.Label(header_text, text="BookCipher", style="Header.Title.TLabel")
-        title.pack(anchor="w")
+        title = ttk.Label(header, text="BookCipher", style="Title.TLabel")
+        title.pack(side="left")
 
         subtitle = ttk.Label(
-            header_text,
+            outer,
             text="Hybrid book cipher • compact ciphertext (no spaces) • authenticated encryption",
-            style="Header.Sub.TLabel",
+            style="Sub.TLabel",
         )
-        subtitle.pack(anchor="w", pady=(4, 0))
-
-        ttk.Separator(outer, orient="horizontal").pack(fill="x", pady=(0, 12))
+        subtitle.pack(anchor="w", pady=(6, 10))
 
         # Top row controls
-        controls_card = self._card(outer, pady_outer=(0, 10))
-        top = ttk.Frame(controls_card, style="Card.TFrame")
-        top.pack(fill="x")
+        top = ttk.Frame(outer, style="Panel.TFrame")
+        top.pack(fill="x", pady=(0, 10))
 
         self._btn(top, "Add Books (.txt)…", self.add_books).pack(side="left")
 
@@ -217,10 +194,9 @@ class BookCipherApp(tk.Tk):
             text="Auto-clean Gutenberg headers",
             variable=self.autoclean_var,
             command=self._on_books_changed,
-            style="Card.TCheckbutton",
         ).pack(side="left", padx=(16, 0))
 
-        ttk.Label(top, text="Key:", style="Card.TLabel").pack(side="left", padx=(16, 6))
+        ttk.Label(top, text="Key:", style="TLabel").pack(side="left", padx=(16, 6))
 
         # Key entry + show/hide
         self.key_entry = tk.Entry(
@@ -230,8 +206,6 @@ class BookCipherApp(tk.Tk):
             bg=ENTRY_BG,
             fg=FG,
             insertbackground=FG,
-            selectbackground=ACCENT_2,
-            selectforeground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
             highlightthickness=1,
@@ -244,14 +218,10 @@ class BookCipherApp(tk.Tk):
         self.show_key_btn.pack(side="left", padx=(8, 0))
 
         # Strength meter
-        strength_row = ttk.Frame(controls_card, style="Card.TFrame")
-        strength_row.pack(fill="x", pady=(10, 0))
+        strength_row = ttk.Frame(outer, style="Panel.TFrame")
+        strength_row.pack(fill="x", pady=(0, 10))
 
-        self.strength_label = ttk.Label(
-            strength_row,
-            textvariable=self.strength_var,
-            style="Card.Sub.TLabel",
-        )
+        self.strength_label = ttk.Label(strength_row, textvariable=self.strength_var, style="Sub.TLabel")
         self.strength_label.pack(side="left")
 
         self.strength_bar = ttk.Progressbar(
@@ -264,31 +234,35 @@ class BookCipherApp(tk.Tk):
         self.strength_bar.pack(side="left", padx=(10, 0))
 
         # Books list with numbering and drag-drop support
-        books_box = self._card(outer, pady_outer=(0, 10))
+        books_box = ttk.Frame(outer, style="Panel.TFrame")
+        books_box.pack(fill="x", expand=False)
 
         ttk.Label(
             books_box,
             text="Books (combined into one corpus) — Drag to reorder",
-            style="Card.Section.TLabel",
+            style="TLabel",
         ).pack(anchor="w")
 
         # Create frame for listbox and controls
-        books_frame = ttk.Frame(books_box, style="Card.TFrame")
+        books_frame = ttk.Frame(books_box, style="Panel.TFrame")
         books_frame.pack(fill="x", pady=(6, 0))
 
+        # Listbox for books
         self.books_list = tk.Listbox(
             books_frame,
+            selectmode="extended",
             bg=TEXT_BG,
             fg=FG,
+            selectbackground=ACCENT,
+            selectforeground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
-            highlightthickness=1,
-            selectbackground=ACCENT_2,
-            selectforeground=FG,
+            highlightthickness=2,
             relief="flat",
             height=4,
             exportselection=False,
             width=60,
+            font=("Helvetica", 11),
         )
         self.books_list.pack(side="left", fill="both", expand=True)
 
@@ -297,64 +271,65 @@ class BookCipherApp(tk.Tk):
         scrollbar.pack(side="right", fill="y")
         self.books_list.config(yscrollcommand=scrollbar.set)
 
-        # Reorder buttons
-        btn_frame = ttk.Frame(books_box, style="Card.TFrame")
-        btn_frame.pack(fill="x", pady=(6, 0))
-
-        self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
-        self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
-        self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
-        self._btn(btn_frame, "Randomize Order", self.randomize_books).pack(side="left", padx=(10, 0))
-
         # Bind drag-drop events
         self.books_list.bind("<Button-1>", self._on_listbox_press)
         self.books_list.bind("<B1-Motion>", self._on_listbox_drag)
         self.books_list.bind("<ButtonRelease-1>", self._on_listbox_release)
         self._drag_start_index = None
 
-        # Main content area for text widgets and actions (restored)
-        content = self._card(outer, fill="both", expand=True, pady_outer=(0, 0))
+        # Reorder buttons
+        btn_frame = ttk.Frame(books_box, style="Panel.TFrame")
+        btn_frame.pack(fill="x", pady=(6, 10))
+
+        self._btn(btn_frame, "↑ Move Up", self.move_book_up).pack(side="left", padx=(0, 5))
+        self._btn(btn_frame, "↓ Move Down", self.move_book_down).pack(side="left", padx=(0, 5))
+        self._btn(btn_frame, "Randomize Order", self.randomize_books).pack(side="left", padx=(0, 5))
+        self._btn(btn_frame, "Remove Selected", self.remove_selected).pack(side="left")
+
+        # Main content area for text widgets and actions
+        content = ttk.Frame(outer, style="Panel.TFrame")
+        content.pack(fill="both", expand=True, pady=(10, 0))
 
         # Plaintext
-        ttk.Label(content, text="Plaintext", style="Card.Section.TLabel").pack(anchor="w")
+        ttk.Label(content, text="Plaintext", style="TLabel").pack(anchor="w")
         self.plain = tk.Text(
             content,
             height=7,
             bg=TEXT_BG,
             fg=FG,
             insertbackground=FG,
-            selectbackground=ACCENT_2,
+            selectbackground=ACCENT,
             selectforeground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
+            highlightthickness=2,
             relief="flat",
             wrap="word",
+            font=("Courier", 12),
         )
         self.plain.pack(fill="both", expand=True, pady=(6, 10))
 
         # Ciphertext
-        ttk.Label(
-            content,
-            text="Ciphertext (no spaces; no quotes needed)",
-            style="Card.Section.TLabel",
-        ).pack(anchor="w")
+        ttk.Label(content, text="Ciphertext (no spaces; no quotes needed)", style="TLabel").pack(anchor="w")
         self.cipher = tk.Text(
             content,
             height=6,
             bg=TEXT_BG,
             fg=FG,
             insertbackground=FG,
-            selectbackground=ACCENT_2,
+            selectbackground=ACCENT,
             selectforeground=FG,
             highlightbackground=BORDER,
             highlightcolor=ACCENT_2,
+            highlightthickness=2,
             relief="flat",
             wrap="none",
+            font=("Courier", 12),
         )
         self.cipher.pack(fill="both", expand=True, pady=(6, 12))
 
         # Buttons row
-        actions = ttk.Frame(content, style="Card.TFrame")
+        actions = ttk.Frame(content, style="Panel.TFrame")
         actions.pack(fill="x")
 
         self.encrypt_btn = self._btn(actions, "Encrypt →", self.do_encrypt)
@@ -370,40 +345,21 @@ class BookCipherApp(tk.Tk):
         self.clear_btn.pack(side="right")
 
         # Status bar
-        status = ttk.Frame(content, style="Card.TFrame")
+        status = ttk.Frame(content, style="Panel.TFrame")
         status.pack(fill="x", pady=(10, 0))
 
-        self.status_label = ttk.Label(status, textvariable=self.status_var, style="Card.Sub.TLabel")
+        self.status_label = ttk.Label(status, textvariable=self.status_var, style="Sub.TLabel")
         self.status_label.pack(side="left")
 
     def randomize_books(self) -> None:
         """Randomize the order of the selected books."""
-        if len(self.book_paths) < 2:
-            return
-        self.book_paths = self._shuffled_books(self.book_paths)
-        self._refresh_books_list()
-        self._on_books_changed()
-
-    def _shuffled_books(self, items: list[Path]) -> list[Path]:
-        """Return a new list with items shuffled (Fisher-Yates)."""
         import random
 
-        shuffled = list(items)
-        for i in range(len(shuffled) - 1, 0, -1):
-            j = random.randint(0, i)
-            if i != j:
-                shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-        if shuffled == items and len(items) > 1:
-            # Retry a few times to avoid no-op shuffle.
-            for _ in range(3):
-                shuffled = list(items)
-                for i in range(len(shuffled) - 1, 0, -1):
-                    j = random.randint(0, i)
-                    if i != j:
-                        shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
-                if shuffled != items:
-                    break
-        return shuffled
+        if not self.book_paths:
+            return
+        random.shuffle(self.book_paths)
+        self._refresh_books_list()
+        self._on_books_changed()
 
     def _btn(self, parent, text: str, cmd, mini: bool = False):
         # Prefer tkmacosx Button if available (fixes “white ttk button” look)
@@ -421,7 +377,6 @@ class BookCipherApp(tk.Tk):
                 padx=10 if not mini else 8,
                 pady=6 if not mini else 4,
                 highlightthickness=0,
-                font=FONT_SMALL,
             )
 
         # Fallback: tk.Button (not ttk) so we can control colors
@@ -434,14 +389,9 @@ class BookCipherApp(tk.Tk):
             activebackground=ACCENT_2,
             activeforeground=FG,
             relief="flat",
-            borderwidth=0,
             padx=10 if not mini else 8,
             pady=6 if not mini else 4,
-            highlightthickness=1,
-            highlightbackground=BORDER,
-            highlightcolor=ACCENT_2,
-            disabledforeground=MUTED,
-            font=FONT_SMALL,
+            highlightthickness=0,
         )
 
     def _bind_events(self) -> None:
@@ -571,9 +521,6 @@ class BookCipherApp(tk.Tk):
             self.key_entry.config(show="•")
             self.show_key_btn.config(text="Show")
 
-        # update button label ("Show" / "Hide")
-        # (find the sibling button by reading text isn't easy; simplest: set window focus and ignore)
-        # We'll just set status:
         self.status_var.set("Key visible." if self.show_key_var.get() else "Key hidden.")
 
     def _update_key_strength(self) -> None:

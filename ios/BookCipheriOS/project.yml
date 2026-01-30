@@ -1,0 +1,18 @@
+name: BookCipheriOS
+options:
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  BookCipheriOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: BookCipheriOS
+    resources:
+      - path: BookCipheriOS/Assets.xcassets
+      - path: BookCipheriOS/Preview Content
+    info:
+      path: BookCipheriOS/Info.plist
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.bookcipher.BookCipheriOS
+      SWIFT_VERSION: "5.0"

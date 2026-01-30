@@ -1,10 +1,334 @@
 // !$*UTF8*$!
 {
-  archiveVersion = 1;
-  classes = {
-  };
-  objectVersion = 56;
-  objects = {
-  };
-  rootObject = 000000000000000000000000;
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		38A76D670C87A44B3EE9409B /* TokenFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1DEECF09FC2F2EF5B13671F /* TokenFormats.swift */; };
+		56BF45C68ED06128D994002A /* CryptoEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC43DA75824ADBB4E44FB74E /* CryptoEngine.swift */; };
+		5AE36F7043767C9ABC60F376 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 78A81EDC8CEF4CF7249E0066 /* Preview Assets.xcassets */; };
+		68CF7B9A670FFCEFAE9BBAEE /* OCRScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A67D50AFD7AFDE740E18FE7 /* OCRScanner.swift */; };
+		777F283CE402A534B2AFE8C3 /* BookCipheriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2D70830D8DC340379839DB9 /* BookCipheriOSApp.swift */; };
+		BBDD92933E6FDC9E72FEFEDD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BA714FB5DB102650012E89CE /* Assets.xcassets */; };
+		EB147261100CF1E894C4E9D4 /* CorpusStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07FB79D12580735178078C6A /* CorpusStore.swift */; };
+		EDA74096C2F0CC2E96C507FE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 309BBA26587EC0848434FE7F /* ContentView.swift */; };
+		FE8687C2C3F0AB84DF2F89D0 /* OCRViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133AF8286F8D8BE20AB418F1 /* OCRViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		07FB79D12580735178078C6A /* CorpusStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorpusStore.swift; sourceTree = "<group>"; };
+		133AF8286F8D8BE20AB418F1 /* OCRViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRViewModel.swift; sourceTree = "<group>"; };
+		1F1B8B5F4C871F4CA2B17B1B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2A4D32BB555E37AEB1F7E50C /* BookCipheriOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookCipheriOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A67D50AFD7AFDE740E18FE7 /* OCRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRScanner.swift; sourceTree = "<group>"; };
+		309BBA26587EC0848434FE7F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		78A81EDC8CEF4CF7249E0066 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		B1DEECF09FC2F2EF5B13671F /* TokenFormats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenFormats.swift; sourceTree = "<group>"; };
+		BA714FB5DB102650012E89CE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F2D70830D8DC340379839DB9 /* BookCipheriOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookCipheriOSApp.swift; sourceTree = "<group>"; };
+		FC43DA75824ADBB4E44FB74E /* CryptoEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoEngine.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		7755049CFA6E6774F6927AF3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2A4D32BB555E37AEB1F7E50C /* BookCipheriOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		84179CFF5EF10FCC1E6552F5 /* BookCipheriOS */ = {
+			isa = PBXGroup;
+			children = (
+				BA714FB5DB102650012E89CE /* Assets.xcassets */,
+				F2D70830D8DC340379839DB9 /* BookCipheriOSApp.swift */,
+				309BBA26587EC0848434FE7F /* ContentView.swift */,
+				07FB79D12580735178078C6A /* CorpusStore.swift */,
+				FC43DA75824ADBB4E44FB74E /* CryptoEngine.swift */,
+				1F1B8B5F4C871F4CA2B17B1B /* Info.plist */,
+				2A67D50AFD7AFDE740E18FE7 /* OCRScanner.swift */,
+				133AF8286F8D8BE20AB418F1 /* OCRViewModel.swift */,
+				B1DEECF09FC2F2EF5B13671F /* TokenFormats.swift */,
+				BAFDBE0DDCEF7D240B4A8AAF /* Preview Content */,
+			);
+			path = BookCipheriOS;
+			sourceTree = "<group>";
+		};
+		BAFDBE0DDCEF7D240B4A8AAF /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				78A81EDC8CEF4CF7249E0066 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		E8EEABE244BCA8BCFFD090F3 = {
+			isa = PBXGroup;
+			children = (
+				84179CFF5EF10FCC1E6552F5 /* BookCipheriOS */,
+				7755049CFA6E6774F6927AF3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		15E1189205AB7B7CA8CD5DFE /* BookCipheriOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F642C474152E63EC5CA584A /* Build configuration list for PBXNativeTarget "BookCipheriOS" */;
+			buildPhases = (
+				EF25025F0CB79CA829D78D47 /* Sources */,
+				AABD1640269104EADFC68A02 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BookCipheriOS;
+			packageProductDependencies = (
+			);
+			productName = BookCipheriOS;
+			productReference = 2A4D32BB555E37AEB1F7E50C /* BookCipheriOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		023EB09775CF22E596CBE0F2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 654742CA4AB5528AB441DC39 /* Build configuration list for PBXProject "BookCipheriOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E8EEABE244BCA8BCFFD090F3;
+			minimizedProjectReferenceProxies = 1;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				15E1189205AB7B7CA8CD5DFE /* BookCipheriOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AABD1640269104EADFC68A02 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BBDD92933E6FDC9E72FEFEDD /* Assets.xcassets in Resources */,
+				5AE36F7043767C9ABC60F376 /* Preview Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EF25025F0CB79CA829D78D47 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				777F283CE402A534B2AFE8C3 /* BookCipheriOSApp.swift in Sources */,
+				EDA74096C2F0CC2E96C507FE /* ContentView.swift in Sources */,
+				EB147261100CF1E894C4E9D4 /* CorpusStore.swift in Sources */,
+				56BF45C68ED06128D994002A /* CryptoEngine.swift in Sources */,
+				68CF7B9A670FFCEFAE9BBAEE /* OCRScanner.swift in Sources */,
+				FE8687C2C3F0AB84DF2F89D0 /* OCRViewModel.swift in Sources */,
+				38A76D670C87A44B3EE9409B /* TokenFormats.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		10B4DFCEDCE1D06B1FC928A6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = F5PNTR48XA;
+				INFOPLIST_FILE = BookCipheriOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bookcipher.BookCipheriOS;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		206A23A5AB66BCE1842EDC08 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		55605760DFC37BEE2FED8DF5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = F5PNTR48XA;
+				INFOPLIST_FILE = BookCipheriOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.bookcipher.BookCipheriOS;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9BD476E313BCBC6FB95859B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		654742CA4AB5528AB441DC39 /* Build configuration list for PBXProject "BookCipheriOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9BD476E313BCBC6FB95859B1 /* Debug */,
+				206A23A5AB66BCE1842EDC08 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6F642C474152E63EC5CA584A /* Build configuration list for PBXNativeTarget "BookCipheriOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55605760DFC37BEE2FED8DF5 /* Debug */,
+				10B4DFCEDCE1D06B1FC928A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 023EB09775CF22E596CBE0F2 /* Project object */;
 }
